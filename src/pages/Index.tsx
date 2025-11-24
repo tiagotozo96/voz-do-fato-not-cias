@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CategoryCircle } from "@/components/CategoryCircle";
 import { NewsCard } from "@/components/NewsCard";
+import { AdBanner } from "@/components/AdBanner";
 
 import brasilNews from "@/assets/brasil-news.jpg";
 import mundoNews from "@/assets/mundo-news.jpg";
@@ -9,6 +10,10 @@ import tecnologiaNews from "@/assets/tecnologia-news.jpg";
 import economiaNews from "@/assets/economia-news.jpg";
 import esportesNews from "@/assets/esportes-news.jpg";
 import entretenimentoNews from "@/assets/entretenimento-news.jpg";
+import policiaNews1 from "@/assets/policia-news-1.jpg";
+import policiaNews2 from "@/assets/policia-news-2.jpg";
+import policiaNews3 from "@/assets/policia-news-3.jpg";
+import policiaNews4 from "@/assets/policia-news-4.jpg";
 
 import catBrasil from "@/assets/cat-brasil.jpg";
 import catMundo from "@/assets/cat-mundo.jpg";
@@ -34,6 +39,37 @@ const Index = () => {
     category: "TECNOLOGIA",
     date: "23/11/2025 - Tecnologia",
   };
+
+  const policeNews = [
+    {
+      title: "Grande Operação Policial Desmantela Quadrilha na Capital",
+      description: "Ação coordenada resulta em prisões e apreensões importantes.",
+      image: policiaNews1,
+      category: "POLÍCIA",
+      date: "23/11/2025",
+    },
+    {
+      title: "Polícia Investiga Série de Crimes na Região Metropolitana",
+      description: "Autoridades trabalham para identificar suspeitos envolvidos.",
+      image: policiaNews2,
+      category: "POLÍCIA",
+      date: "23/11/2025",
+    },
+    {
+      title: "Coletiva de Imprensa Esclarece Detalhes de Operação",
+      description: "Comando da polícia apresenta resultados de investigação de meses.",
+      image: policiaNews3,
+      category: "POLÍCIA",
+      date: "23/11/2025",
+    },
+    {
+      title: "Perícia Criminal Trabalha em Caso de Grande Repercussão",
+      description: "Equipe forense coleta evidências em importante investigação.",
+      image: policiaNews4,
+      category: "POLÍCIA",
+      date: "22/11/2025",
+    },
+  ];
 
   const recentNews = [
     {
@@ -85,6 +121,11 @@ const Index = () => {
       <Header />
 
       <main className="flex-1">
+        {/* Top Ad Banner */}
+        <section className="container mx-auto px-4 py-4">
+          <AdBanner size="large" />
+        </section>
+
         {/* Categories Section */}
         <section className="bg-muted py-8 border-y border-border">
           <div className="container mx-auto px-4">
@@ -105,6 +146,28 @@ const Index = () => {
           <NewsCard {...featuredNews} featured={true} />
         </section>
 
+        {/* Police News Section - Highlighted */}
+        <section className="bg-gradient-to-r from-red-950/20 to-red-900/10 py-12 border-y-4 border-primary">
+          <div className="container mx-auto px-4">
+            <div className="mb-8">
+              <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4 flex items-center gap-3">
+                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-md">POLÍCIA</span>
+                Notícias Policiais em Destaque
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {policeNews.map((news, index) => (
+                <NewsCard key={index} {...news} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Mid Ad Banner */}
+        <section className="container mx-auto px-4 py-8">
+          <AdBanner size="medium" />
+        </section>
+
         {/* Recent News Grid */}
         <section className="container mx-auto px-4 pb-12">
           <div className="mb-8">
@@ -117,6 +180,11 @@ const Index = () => {
               <NewsCard key={index} {...news} />
             ))}
           </div>
+        </section>
+
+        {/* Bottom Ad Banner */}
+        <section className="container mx-auto px-4 py-8">
+          <AdBanner size="large" />
         </section>
 
         {/* More News Section */}
