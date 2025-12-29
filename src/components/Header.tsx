@@ -1,10 +1,13 @@
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, User } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-card shadow-md">
@@ -22,6 +25,11 @@ export const Header = () => {
             <a href="#" className="hover:text-accent transition-colors">Instagram</a>
             <span>|</span>
             <a href="#" className="hover:text-accent transition-colors">Facebook</a>
+            <span>|</span>
+            <Link to={user ? "/admin" : "/auth"} className="flex items-center gap-1 hover:text-accent transition-colors">
+              <User className="h-3 w-3" />
+              {user ? "Painel" : "Login"}
+            </Link>
           </div>
         </div>
       </div>
