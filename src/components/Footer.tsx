@@ -1,6 +1,5 @@
 export const Footer = () => {
-  return (
-    <footer className="bg-secondary text-secondary-foreground mt-16">
+  return <footer className="bg-secondary text-secondary-foreground mt-16">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
@@ -19,7 +18,7 @@ export const Footer = () => {
             <h4 className="font-bold mb-4">Categorias</h4>
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="hover:text-primary transition-colors">Brasil</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Mundo</a></li>
+              <li>Polícia<a href="#" className="hover:text-primary transition-colors">Mundo</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Economia</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Esportes</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Entretenimento</a></li>
@@ -55,6 +54,5 @@ export const Footer = () => {
           <p>© {new Date().getFullYear()} Voz do Fato. Todos os direitos reservados.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
