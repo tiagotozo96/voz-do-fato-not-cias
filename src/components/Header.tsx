@@ -73,13 +73,13 @@ export const Header = () => {
         {/* Navigation */}
         <nav className={`${isMenuOpen ? 'block' : 'hidden'} lg:block mt-4 lg:mt-6`}>
           <ul className="flex flex-col lg:flex-row lg:items-center lg:justify-center gap-2 lg:gap-6 text-sm font-medium">
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Home</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Editorias</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Notícias</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Web Stories</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Vídeos</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Multimídia</a></li>
-            <li><a href="#" className="block py-2 lg:py-0 hover:text-primary transition-colors">Contato</a></li>
+            <li><Link to="/" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Home</Link></li>
+            <li><Link to="/editorias" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Editorias</Link></li>
+            <li><Link to="/noticias" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Notícias</Link></li>
+            <li><Link to="/web-stories" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Web Stories</Link></li>
+            <li><Link to="/videos" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Vídeos</Link></li>
+            <li><Link to="/multimidia" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Multimídia</Link></li>
+            <li><Link to="/contato" className="block py-2 lg:py-0 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Contato</Link></li>
           </ul>
         </nav>
       </div>
