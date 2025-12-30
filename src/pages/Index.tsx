@@ -21,11 +21,12 @@ import catTech from "@/assets/cat-tech.jpg";
 import catEconomia from "@/assets/cat-economia.jpg";
 import catEsportes from "@/assets/cat-esportes.jpg";
 import catEntretenimento from "@/assets/cat-entretenimento.jpg";
+import catPolicia from "@/assets/cat-policia.jpg";
 
 const Index = () => {
   const categories = [
     { name: "Brasil", icon: catBrasil },
-    { name: "Polícia", icon: catMundo },
+    { name: "Polícia", icon: catPolicia },
     { name: "Tecnologia", icon: catTech },
     { name: "Economia", icon: catEconomia },
     { name: "Esportes", icon: catEsportes },
