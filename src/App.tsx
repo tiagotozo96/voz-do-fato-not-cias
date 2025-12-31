@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Category from "./pages/Category";
+import NoticiaDetalhe from "./pages/NoticiaDetalhe";
 import Editorias from "./pages/Editorias";
 import Noticias from "./pages/Noticias";
 import WebStories from "./pages/WebStories";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/categoria/:slug" element={<Category />} />
+            <Route path="/noticia/:slug" element={<NoticiaDetalhe />} />
             <Route path="/editorias" element={<Editorias />} />
             <Route path="/noticias" element={<Noticias />} />
             <Route path="/web-stories" element={<WebStories />} />
