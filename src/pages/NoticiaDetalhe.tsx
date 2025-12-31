@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdBanner } from "@/components/AdBanner";
-import { Calendar, Clock, User, Eye, Share2, Facebook, Twitter, Linkedin, Link as LinkIcon, ChevronRight } from "lucide-react";
+import { Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, Link as LinkIcon, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -151,10 +151,6 @@ const NoticiaDetalhe = () => {
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
                 <span>{news.readTime}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Eye className="h-4 w-4" />
-                <span>{news.views.toLocaleString()} visualizações</span>
               </div>
             </div>
 
