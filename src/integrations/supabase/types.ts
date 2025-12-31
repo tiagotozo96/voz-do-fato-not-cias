@@ -161,6 +161,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_news_views: { Args: { news_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "editor" | "user"
