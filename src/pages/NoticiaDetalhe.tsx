@@ -9,71 +9,51 @@ import { toast } from "@/hooks/use-toast";
 import brasilNews from "@/assets/brasil-news.jpg";
 import policiaNews1 from "@/assets/policia-news-1.jpg";
 import policiaNews2 from "@/assets/policia-news-2.jpg";
+import tecnologiaNews from "@/assets/tecnologia-news.jpg";
+import economiaNews from "@/assets/economia-news.jpg";
+import esportesNews from "@/assets/esportes-news.jpg";
+import entretenimentoNews from "@/assets/entretenimento-news.jpg";
 
-// Placeholder news data
-const newsData: Record<string, {
-  title: string;
-  category: string;
-  categorySlug: string;
-  author: string;
-  date: string;
-  readTime: string;
-  views: number;
-  image: string;
-  content: string[];
-  tags: string[];
-}> = {
-  "governo-anuncia-novo-pacote-economico": {
-    title: "Governo anuncia novo pacote de medidas econômicas para 2025",
-    category: "Brasil",
-    categorySlug: "brasil",
-    author: "João Silva",
-    date: "30 de Dezembro, 2024",
-    readTime: "5 min de leitura",
-    views: 1250,
-    image: brasilNews,
-    content: [
-      "O governo federal anunciou nesta segunda-feira um novo pacote de medidas econômicas que promete impulsionar o crescimento do país em 2025. As medidas incluem incentivos fiscais para pequenas e médias empresas, além de investimentos em infraestrutura.",
-      "Segundo o ministro da Economia, as novas políticas devem gerar mais de 500 mil empregos nos próximos dois anos. 'Estamos focados em criar um ambiente favorável para o empreendedorismo e a geração de renda', afirmou em coletiva de imprensa.",
-      "Entre as principais medidas anunciadas estão: redução de impostos para setores estratégicos, linha de crédito especial para micro e pequenas empresas, programa de capacitação profissional e investimentos em tecnologia e inovação.",
-      "Especialistas avaliam que o pacote pode ter impacto significativo na recuperação econômica do país. 'As medidas são bem direcionadas e atendem demandas históricas do setor produtivo', comentou o economista Carlos Mendes.",
-      "A implementação das medidas deve começar no primeiro trimestre de 2025, com resultados esperados já no segundo semestre do próximo ano.",
-    ],
-    tags: ["Economia", "Governo", "Investimentos", "Empregos"],
-  },
-  "operacao-policial-prende-quadrilha": {
-    title: "Operação policial prende quadrilha especializada em roubo de cargas",
-    category: "Polícia",
-    categorySlug: "policia",
-    author: "Maria Santos",
-    date: "29 de Dezembro, 2024",
-    readTime: "4 min de leitura",
-    views: 890,
-    image: policiaNews1,
-    content: [
-      "Uma operação conjunta entre as polícias Civil e Federal resultou na prisão de 12 integrantes de uma quadrilha especializada em roubo de cargas na região metropolitana.",
-      "A organização criminosa atuava há mais de dois anos e era responsável por prejuízos estimados em R$ 15 milhões. Os criminosos utilizavam veículos clonados e tinham informantes em empresas de logística.",
-      "Durante a operação, foram apreendidos veículos, armas de fogo e mercadorias roubadas avaliadas em R$ 2 milhões. Os presos serão indiciados por associação criminosa, roubo qualificado e receptação.",
-    ],
-    tags: ["Polícia", "Operação", "Segurança", "Crime"],
-  },
-};
+// Helper to generate slug
+const generateSlug = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .substring(0, 60);
+
+// All placeholder news data - slugs auto-generated from titles
+const allNewsItems = [
+  { title: "Tecnologia Transforma o Cenário Global de Comunicação", category: "Tecnologia", categorySlug: "tecnologia", author: "Carlos Tech", date: "23 de Novembro, 2025", readTime: "5 min", views: 2340, image: tecnologiaNews, content: ["Novas plataformas digitais revolucionam a forma como consumimos informação e nos conectamos com o mundo.", "A transformação digital está acelerando em todos os setores da economia global.", "Empresas de tecnologia lideram essa mudança com inovações constantes."], tags: ["Tecnologia", "Digital", "Inovação"] },
+  { title: "Grande Operação Policial Desmantela Quadrilha na Capital", category: "Polícia", categorySlug: "policia", author: "Maria Santos", date: "23 de Novembro, 2025", readTime: "4 min", views: 1890, image: policiaNews1, content: ["Ação coordenada resulta em prisões e apreensões importantes.", "A operação foi resultado de meses de investigação.", "Autoridades prometem mais ações para combater o crime organizado."], tags: ["Polícia", "Segurança", "Operação"] },
+  { title: "Polícia Investiga Série de Crimes na Região Metropolitana", category: "Polícia", categorySlug: "policia", author: "Pedro Lima", date: "23 de Novembro, 2025", readTime: "3 min", views: 1450, image: policiaNews2, content: ["Autoridades trabalham para identificar suspeitos envolvidos.", "Casos estão sendo investigados em conjunto.", "População é orientada a denunciar atividades suspeitas."], tags: ["Polícia", "Investigação", "Crime"] },
+  { title: "Economia Brasileira Apresenta Sinais de Recuperação", category: "Economia", categorySlug: "economia", author: "Ana Economia", date: "23 de Novembro, 2025", readTime: "6 min", views: 3200, image: economiaNews, content: ["Especialistas apontam crescimento em setores-chave da economia nacional.", "O PIB cresceu acima das expectativas no último trimestre.", "Investimentos estrangeiros também apresentam alta significativa."], tags: ["Economia", "PIB", "Crescimento"] },
+  { title: "Campeonato Nacional: Times se Preparam para Final", category: "Esportes", categorySlug: "esportes", author: "João Esporte", date: "23 de Novembro, 2025", readTime: "4 min", views: 5600, image: esportesNews, content: ["Grande decisão promete movimentar milhões de torcedores pelo país.", "Os dois finalistas chegam em ótima forma para o confronto.", "Ingressos esgotados em poucas horas após início das vendas."], tags: ["Esportes", "Futebol", "Final"] },
+  { title: "Cinema Nacional Ganha Destaque em Festival Internacional", category: "Entretenimento", categorySlug: "entretenimento", author: "Julia Arte", date: "22 de Novembro, 2025", readTime: "5 min", views: 1800, image: entretenimentoNews, content: ["Produções brasileiras são aplaudidas em importante evento de cinema.", "Diretores brasileiros receberam reconhecimento internacional.", "O cinema nacional vive um momento de renascimento criativo."], tags: ["Cinema", "Festival", "Cultura"] },
+  { title: "Brasil Participa de Importante Reunião sobre Meio Ambiente", category: "Brasil", categorySlug: "brasil", author: "Roberto Ambiente", date: "22 de Novembro, 2025", readTime: "5 min", views: 2100, image: brasilNews, content: ["País apresenta novas políticas ambientais em conferência internacional.", "Compromissos foram firmados para redução de emissões.", "A preservação da Amazônia foi tema central das discussões."], tags: ["Brasil", "Meio Ambiente", "Política"] },
+  { title: "Governo anuncia novas medidas econômicas", category: "Brasil", categorySlug: "brasil", author: "João Silva", date: "23 de Novembro, 2025", readTime: "5 min", views: 1250, image: brasilNews, content: ["Pacote de medidas visa estimular crescimento e reduzir inflação.", "Empresas terão acesso a linhas de crédito especiais.", "Medidas entram em vigor a partir do próximo mês."], tags: ["Economia", "Governo", "Brasil"] },
+  { title: "Nova IA revoluciona setor de saúde", category: "Tecnologia", categorySlug: "tecnologia", author: "Carlos Tech", date: "23 de Novembro, 2025", readTime: "6 min", views: 4500, image: tecnologiaNews, content: ["Inteligência artificial auxilia diagnósticos médicos com precisão.", "Hospitais já estão implementando a nova tecnologia.", "Resultados preliminares mostram aumento na eficiência dos tratamentos."], tags: ["IA", "Saúde", "Tecnologia"] },
+  { title: "Seleção Brasileira convoca jogadores para eliminatórias", category: "Esportes", categorySlug: "esportes", author: "João Esporte", date: "23 de Novembro, 2025", readTime: "3 min", views: 8900, image: esportesNews, content: ["Técnico anuncia lista com novidades para próximos jogos.", "Novos talentos ganham oportunidade na seleção.", "Próximos jogos serão decisivos para classificação."], tags: ["Seleção", "Futebol", "Convocação"] },
+  { title: "Bolsa de valores atinge novo recorde", category: "Economia", categorySlug: "economia", author: "Ana Economia", date: "23 de Novembro, 2025", readTime: "4 min", views: 3800, image: economiaNews, content: ["Índice principal fecha em alta histórica impulsionado por commodities.", "Investidores estão otimistas com o cenário econômico.", "Analistas projetam continuidade da tendência de alta."], tags: ["Bolsa", "Investimentos", "Economia"] },
+  { title: "Filme brasileiro concorre a prêmio internacional", category: "Entretenimento", categorySlug: "entretenimento", author: "Julia Arte", date: "23 de Novembro, 2025", readTime: "4 min", views: 2200, image: entretenimentoNews, content: ["Produção nacional é indicada em festival de cinema.", "O filme retrata a realidade brasileira de forma única.", "Elenco e equipe celebram a indicação histórica."], tags: ["Cinema", "Prêmio", "Cultura"] },
+];
+
+// Create lookup by slug
+const newsData: Record<string, typeof allNewsItems[0]> = {};
+allNewsItems.forEach(item => {
+  const slug = generateSlug(item.title);
+  newsData[slug] = item;
+});
 
 // Related news placeholder
-const relatedNews = [
-  {
-    slug: "economia-brasileira-cresce",
-    title: "Economia brasileira cresce acima das expectativas no terceiro trimestre",
-    image: policiaNews2,
-    category: "Economia",
-  },
-  {
-    slug: "nova-politica-industrial",
-    title: "Nova política industrial promete modernizar setor produtivo",
-    image: brasilNews,
-    category: "Brasil",
-  },
-];
+const relatedNews = allNewsItems.slice(0, 3).map(item => ({
+  slug: generateSlug(item.title),
+  title: item.title,
+  image: item.image,
+  category: item.category,
+}));
 
 const NoticiaDetalhe = () => {
   const { slug } = useParams<{ slug: string }>();
