@@ -4,7 +4,7 @@ import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
@@ -20,32 +20,60 @@ interface NewsItem {
   } | null;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
+
 const ITEMS_PER_PAGE = 9;
 
 const Noticias = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  const fetchNews = async (page: number) => {
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, slug, color")
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar categorias:", error);
+    }
+  };
+
+  const fetchNews = async (page: number, categoryId: string | null = null) => {
     setIsLoading(true);
     const from = (page - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
     try {
-      // Get total count
-      const { count } = await supabase
+      // Build query for count
+      let countQuery = supabase
         .from("news")
         .select("*", { count: "exact", head: true })
         .eq("is_published", true);
 
+      if (categoryId) {
+        countQuery = countQuery.eq("category_id", categoryId);
+      }
+
+      const { count } = await countQuery;
       setTotalCount(count || 0);
 
-      // Get paginated results
-      const { data, error } = await supabase
+      // Build query for data
+      let dataQuery = supabase
         .from("news")
         .select(`
           id,
@@ -60,6 +88,12 @@ const Noticias = () => {
         .order("published_at", { ascending: false })
         .range(from, to);
 
+      if (categoryId) {
+        dataQuery = dataQuery.eq("category_id", categoryId);
+      }
+
+      const { data, error } = await dataQuery;
+
       if (error) throw error;
 
       setNews(data || []);
@@ -73,11 +107,17 @@ const Noticias = () => {
   };
 
   useEffect(() => {
+    fetchCategories();
     fetchNews(1);
   }, []);
 
+  const handleCategoryChange = (categoryId: string | null) => {
+    setSelectedCategory(categoryId);
+    fetchNews(1, categoryId);
+  };
+
   const handlePageChange = (page: number) => {
-    fetchNews(page);
+    fetchNews(page, selectedCategory);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -167,7 +207,41 @@ const Noticias = () => {
           </div>
         </section>
 
-        <section className="container mx-auto px-4 py-8">
+        {/* Category Filters */}
+        <section className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Filtrar por categoria:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleCategoryChange(null)}
+              className="rounded-full"
+            >
+              Todas
+            </Button>
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCategoryChange(category.id)}
+                className="rounded-full"
+                style={
+                  selectedCategory === category.id && category.color
+                    ? { backgroundColor: category.color, borderColor: category.color }
+                    : {}
+                }
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-4">
           <AdBanner size="medium" />
         </section>
 
@@ -179,10 +253,13 @@ const Noticias = () => {
             </div>
           ) : news.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>Nenhuma notícia encontrada.</p>
+              <p>Nenhuma notícia encontrada{selectedCategory ? " nesta categoria" : ""}.</p>
             </div>
           ) : (
             <>
+              <p className="text-sm text-muted-foreground mb-6">
+                {totalCount} notícia{totalCount !== 1 ? "s" : ""} encontrada{totalCount !== 1 ? "s" : ""}
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {news.map((item) => (
                   <NewsCard
