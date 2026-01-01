@@ -15,6 +15,7 @@ import WebStories from "./pages/WebStories";
 import Videos from "./pages/Videos";
 import Multimidia from "./pages/Multimidia";
 import Contato from "./pages/Contato";
+import Busca from "./pages/Busca";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/videos" element={<Videos />} />
             <Route path="/multimidia" element={<Multimidia />} />
             <Route path="/contato" element={<Contato />} />
+            <Route path="/busca" element={<Busca />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
