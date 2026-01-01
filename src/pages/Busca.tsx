@@ -6,7 +6,7 @@ import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
@@ -22,21 +22,40 @@ interface NewsItem {
   } | null;
 }
 
+const ITEMS_PER_PAGE = 9;
+
 const Busca = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [results, setResults] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const handleSearch = async (searchQuery: string) => {
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  const handleSearch = async (searchQuery: string, page: number = 1) => {
     if (!searchQuery.trim()) return;
 
     setIsLoading(true);
     setHasSearched(true);
-    setSearchParams({ q: searchQuery });
+    setSearchParams({ q: searchQuery, page: page.toString() });
+
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
 
     try {
+      // Get total count
+      const { count } = await supabase
+        .from("news")
+        .select("*", { count: "exact", head: true })
+        .eq("is_published", true)
+        .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`);
+
+      setTotalCount(count || 0);
+
+      // Get paginated results
       const { data, error } = await supabase
         .from("news")
         .select(`
@@ -51,11 +70,12 @@ const Busca = () => {
         .eq("is_published", true)
         .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`)
         .order("published_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
 
       if (error) throw error;
 
       setResults(data || []);
+      setCurrentPage(page);
     } catch (error) {
       console.error("Erro na busca:", error);
       setResults([]);
@@ -66,15 +86,21 @@ const Busca = () => {
 
   useEffect(() => {
     const initialQuery = searchParams.get("q");
+    const initialPage = parseInt(searchParams.get("page") || "1");
     if (initialQuery) {
       setQuery(initialQuery);
-      handleSearch(initialQuery);
+      handleSearch(initialQuery, initialPage);
     }
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSearch(query);
+    handleSearch(query, 1);
+  };
+
+  const handlePageChange = (page: number) => {
+    handleSearch(query, page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const formatDate = (dateString: string | null) => {
@@ -84,6 +110,67 @@ const Busca = () => {
       month: "long",
       year: "numeric",
     });
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages: (number | string)[] = [];
+    const showEllipsisStart = currentPage > 3;
+    const showEllipsisEnd = currentPage < totalPages - 2;
+
+    if (showEllipsisStart) {
+      pages.push(1);
+      if (currentPage > 4) pages.push("...");
+    }
+
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+      if (!pages.includes(i)) pages.push(i);
+    }
+
+    if (showEllipsisEnd) {
+      if (currentPage < totalPages - 3) pages.push("...");
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-8">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {pages.map((page, idx) =>
+          typeof page === "string" ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+              ...
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="icon"
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </Button>
+          )
+        )}
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
   };
 
   return (
@@ -131,25 +218,28 @@ const Busca = () => {
             ) : hasSearched ? (
               <>
                 <p className="text-muted-foreground mb-6">
-                  {results.length === 0
+                  {totalCount === 0
                     ? `Nenhum resultado encontrado para "${searchParams.get("q")}"`
-                    : `${results.length} resultado${results.length !== 1 ? "s" : ""} encontrado${results.length !== 1 ? "s" : ""} para "${searchParams.get("q")}"`}
+                    : `${totalCount} resultado${totalCount !== 1 ? "s" : ""} encontrado${totalCount !== 1 ? "s" : ""} para "${searchParams.get("q")}"`}
                 </p>
 
                 {results.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {results.map((news) => (
-                      <NewsCard
-                        key={news.id}
-                        title={news.title}
-                        description={news.excerpt || ""}
-                        image={news.image_url || "/placeholder.svg"}
-                        category={news.category?.name || "Geral"}
-                        date={formatDate(news.published_at)}
-                        slug={news.slug}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {results.map((news) => (
+                        <NewsCard
+                          key={news.id}
+                          title={news.title}
+                          description={news.excerpt || ""}
+                          image={news.image_url || "/placeholder.svg"}
+                          category={news.category?.name || "Geral"}
+                          date={formatDate(news.published_at)}
+                          slug={news.slug}
+                        />
+                      ))}
+                    </div>
+                    {renderPagination()}
+                  </>
                 )}
               </>
             ) : (
