@@ -1,15 +1,28 @@
 import { Search, Menu, X, User } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const {
-    user
-  } = useAuth();
-  return <header className="sticky top-0 z-50 bg-card shadow-md">
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/busca?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsMobileSearchOpen(false);
+    }
+  };
+
+  return (
+    <header className="sticky top-0 z-50 bg-card shadow-md">
       {/* Top Bar */}
       <div className="bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 py-2 flex justify-between items-center text-sm">
@@ -48,27 +61,59 @@ export const Header = () => {
 
           {/* Logo */}
           <div className="flex-1 lg:flex-initial">
-            <h1 className="text-3xl lg:text-4xl font-display font-bold text-primary">
-              Voz do Fato
-            </h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">PORTAL DE NOTÍCIAS</p>
+            <Link to="/">
+              <h1 className="text-3xl lg:text-4xl font-display font-bold text-primary">
+                Voz do Fato
+              </h1>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">PORTAL DE NOTÍCIAS</p>
+            </Link>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar Desktop */}
           <div className="hidden lg:flex flex-1 max-w-md">
-            <div className="relative w-full">
-              <Input type="search" placeholder="Buscar notícias..." className="pr-10" />
-              <Button size="icon" variant="ghost" className="absolute right-0 top-0 h-full">
+            <form onSubmit={handleSearch} className="relative w-full">
+              <Input
+                type="search"
+                placeholder="Buscar notícias..."
+                className="pr-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Button type="submit" size="icon" variant="ghost" className="absolute right-0 top-0 h-full">
                 <Search className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
           </div>
 
           {/* Search Icon Mobile */}
-          <Button variant="ghost" size="icon" className="lg:hidden">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden"
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+          >
             <Search className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* Mobile Search Bar */}
+        {isMobileSearchOpen && (
+          <form onSubmit={handleSearch} className="mt-4 lg:hidden">
+            <div className="relative">
+              <Input
+                type="search"
+                placeholder="Buscar notícias..."
+                className="pr-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <Button type="submit" size="icon" variant="ghost" className="absolute right-0 top-0 h-full">
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        )}
 
         {/* Navigation */}
         <nav className={`${isMenuOpen ? 'block' : 'hidden'} lg:block mt-4 lg:mt-6`}>
@@ -83,5 +128,6 @@ export const Header = () => {
           </ul>
         </nav>
       </div>
-    </header>;
+    </header>
+  );
 };
