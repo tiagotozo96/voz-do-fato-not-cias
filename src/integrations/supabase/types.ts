@@ -107,6 +107,42 @@ export type Database = {
           },
         ]
       }
+      news_tags: {
+        Row: {
+          created_at: string
+          id: string
+          news_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          news_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          news_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_tags_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -128,6 +164,27 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
         }
         Relationships: []
       }
