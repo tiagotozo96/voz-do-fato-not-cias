@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdBanner } from "@/components/AdBanner";
-import { Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, Link as LinkIcon, ChevronRight, Loader2, Eye } from "lucide-react";
+import { Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, Link as LinkIcon, ChevronRight, Loader2, Eye, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,10 +38,17 @@ interface RelatedNews {
   } | null;
 }
 
+interface TagItem {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 const NoticiaDetalhe = () => {
   const { slug } = useParams<{ slug: string }>();
   const [news, setNews] = useState<NewsDetail | null>(null);
   const [relatedNews, setRelatedNews] = useState<RelatedNews[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNews = async () => {
@@ -75,7 +82,21 @@ const NoticiaDetalhe = () => {
         
         // Increment views
         await supabase.rpc("increment_news_views", { news_id: data.id });
-        
+
+        // Fetch tags for this news
+        const { data: newsTags, error: tagsError } = await supabase
+          .from("news_tags")
+          .select(`
+            tag:tags(id, name, slug)
+          `)
+          .eq("news_id", data.id);
+
+        if (!tagsError && newsTags) {
+          const tagsList = newsTags
+            .map((nt: any) => nt.tag)
+            .filter((t: any) => t !== null) as TagItem[];
+          setTags(tagsList);
+        }
         // Fetch related news from same category
         if (data.category_id) {
           const { data: related, error: relatedError } = await supabase
@@ -336,6 +357,25 @@ const NoticiaDetalhe = () => {
                 <p className="text-foreground/90 leading-relaxed mb-4">{news.excerpt}</p>
               ) : null}
             </div>
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-border">
+                <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+                  <Tag className="h-4 w-4" />
+                  Tags:
+                </span>
+                {tags.map((tag) => (
+                  <Link
+                    key={tag.id}
+                    to={`/tag/${tag.slug}`}
+                    className="text-sm bg-muted text-muted-foreground px-3 py-1 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Share Again at Bottom */}
             <div className="flex items-center gap-3 mt-8 p-4 bg-muted/50 rounded-lg">
