@@ -4,7 +4,7 @@ import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Filter, ArrowUpDown, Clock, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
@@ -14,11 +14,14 @@ interface NewsItem {
   image_url: string | null;
   published_at: string | null;
   slug: string;
+  views: number | null;
   category: {
     name: string;
     slug: string;
   } | null;
 }
+
+type SortOption = "date_desc" | "date_asc" | "popularity";
 
 interface Category {
   id: string;
@@ -33,6 +36,7 @@ const Noticias = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortOption, setSortOption] = useState<SortOption>("date_desc");
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -53,7 +57,7 @@ const Noticias = () => {
     }
   };
 
-  const fetchNews = async (page: number, categoryId: string | null = null) => {
+  const fetchNews = async (page: number, categoryId: string | null = null, sort: SortOption = "date_desc") => {
     setIsLoading(true);
     const from = (page - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
@@ -82,11 +86,20 @@ const Noticias = () => {
           image_url,
           published_at,
           slug,
+          views,
           category:categories(name, slug)
         `)
         .eq("is_published", true)
-        .order("published_at", { ascending: false })
         .range(from, to);
+
+      // Apply sorting
+      if (sort === "date_desc") {
+        dataQuery = dataQuery.order("published_at", { ascending: false });
+      } else if (sort === "date_asc") {
+        dataQuery = dataQuery.order("published_at", { ascending: true });
+      } else if (sort === "popularity") {
+        dataQuery = dataQuery.order("views", { ascending: false, nullsFirst: false });
+      }
 
       if (categoryId) {
         dataQuery = dataQuery.eq("category_id", categoryId);
@@ -108,16 +121,21 @@ const Noticias = () => {
 
   useEffect(() => {
     fetchCategories();
-    fetchNews(1);
+    fetchNews(1, null, sortOption);
   }, []);
 
   const handleCategoryChange = (categoryId: string | null) => {
     setSelectedCategory(categoryId);
-    fetchNews(1, categoryId);
+    fetchNews(1, categoryId, sortOption);
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    setSortOption(sort);
+    fetchNews(1, selectedCategory, sort);
   };
 
   const handlePageChange = (page: number) => {
-    fetchNews(page, selectedCategory);
+    fetchNews(page, selectedCategory, sortOption);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -207,37 +225,79 @@ const Noticias = () => {
           </div>
         </section>
 
-        {/* Category Filters */}
+        {/* Filters and Sorting */}
         <section className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Filtrar por categoria:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleCategoryChange(null)}
-              className="rounded-full"
-            >
-              Todas
-            </Button>
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategoryChange(category.id)}
-                className="rounded-full"
-                style={
-                  selectedCategory === category.id && category.color
-                    ? { backgroundColor: category.color, borderColor: category.color }
-                    : {}
-                }
-              >
-                {category.name}
-              </Button>
-            ))}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Category Filters */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Filtrar por categoria:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedCategory === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleCategoryChange(null)}
+                  className="rounded-full"
+                >
+                  Todas
+                </Button>
+                {categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleCategoryChange(category.id)}
+                    className="rounded-full"
+                    style={
+                      selectedCategory === category.id && category.color
+                        ? { backgroundColor: category.color, borderColor: category.color }
+                        : {}
+                    }
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sorting Options */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ArrowUpDown className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Ordenar por:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={sortOption === "date_desc" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSortChange("date_desc")}
+                  className="rounded-full"
+                >
+                  <Clock className="h-4 w-4 mr-1" />
+                  Mais recentes
+                </Button>
+                <Button
+                  variant={sortOption === "date_asc" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSortChange("date_asc")}
+                  className="rounded-full"
+                >
+                  <Clock className="h-4 w-4 mr-1" />
+                  Mais antigas
+                </Button>
+                <Button
+                  variant={sortOption === "popularity" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSortChange("popularity")}
+                  className="rounded-full"
+                >
+                  <TrendingUp className="h-4 w-4 mr-1" />
+                  Mais lidas
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 
