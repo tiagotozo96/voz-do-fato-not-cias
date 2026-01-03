@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,8 +27,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface TagItem {
   id: string;
   name: string;
   slug: string;
@@ -56,6 +64,7 @@ const Admin = () => {
   
   const [news, setNews] = useState<News[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<News | null>(null);
@@ -70,6 +79,13 @@ const Admin = () => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  
+  // Tag management state
+  const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+  const [tagName, setTagName] = useState('');
+  const [isSavingTag, setIsSavingTag] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -86,12 +102,13 @@ const Admin = () => {
   const fetchData = async () => {
     setIsLoadingData(true);
     
-    const [newsResult, categoriesResult] = await Promise.all([
+    const [newsResult, categoriesResult, tagsResult] = await Promise.all([
       supabase
         .from('news')
         .select('*, categories(*)')
         .order('created_at', { ascending: false }),
-      supabase.from('categories').select('*').order('name')
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('tags').select('*').order('name')
     ]);
     
     if (newsResult.data) {
@@ -99,6 +116,9 @@ const Admin = () => {
     }
     if (categoriesResult.data) {
       setCategories(categoriesResult.data);
+    }
+    if (tagsResult.data) {
+      setTags(tagsResult.data);
     }
     
     setIsLoadingData(false);
@@ -141,9 +161,10 @@ const Admin = () => {
     setIsPublished(false);
     setImageFile(null);
     setEditingNews(null);
+    setSelectedTagIds([]);
   };
 
-  const openEditDialog = (newsItem: News) => {
+  const openEditDialog = async (newsItem: News) => {
     setEditingNews(newsItem);
     setTitle(newsItem.title);
     setExcerpt(newsItem.excerpt || '');
@@ -152,6 +173,17 @@ const Admin = () => {
     setCategoryId(newsItem.category_id || '');
     setIsFeatured(newsItem.is_featured);
     setIsPublished(newsItem.is_published);
+    
+    // Fetch tags for this news
+    const { data: newsTags } = await supabase
+      .from('news_tags')
+      .select('tag_id')
+      .eq('news_id', newsItem.id);
+    
+    if (newsTags) {
+      setSelectedTagIds(newsTags.map(nt => nt.tag_id));
+    }
+    
     setIsDialogOpen(true);
   };
 
@@ -188,6 +220,8 @@ const Admin = () => {
         author_id: user?.id,
       };
 
+      let newsId = editingNews?.id;
+      
       if (editingNews) {
         const { error } = await supabase
           .from('news')
@@ -195,17 +229,33 @@ const Admin = () => {
           .eq('id', editingNews.id);
         
         if (error) throw error;
-        
-        toast({ title: 'Notícia atualizada com sucesso!' });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('news')
-          .insert(newsData);
+          .insert(newsData)
+          .select('id')
+          .single();
         
         if (error) throw error;
-        
-        toast({ title: 'Notícia criada com sucesso!' });
+        newsId = data.id;
       }
+      
+      // Update tags
+      if (newsId) {
+        // Remove existing tags
+        await supabase.from('news_tags').delete().eq('news_id', newsId);
+        
+        // Add selected tags
+        if (selectedTagIds.length > 0) {
+          const tagInserts = selectedTagIds.map(tagId => ({
+            news_id: newsId,
+            tag_id: tagId,
+          }));
+          await supabase.from('news_tags').insert(tagInserts);
+        }
+      }
+      
+      toast({ title: editingNews ? 'Notícia atualizada com sucesso!' : 'Notícia criada com sucesso!' });
 
       setIsDialogOpen(false);
       resetForm();
@@ -243,6 +293,89 @@ const Admin = () => {
     navigate('/');
   };
 
+  // Tag management functions
+  const resetTagForm = () => {
+    setTagName('');
+    setEditingTag(null);
+  };
+
+  const openEditTagDialog = (tag: TagItem) => {
+    setEditingTag(tag);
+    setTagName(tag.name);
+    setIsTagDialogOpen(true);
+  };
+
+  const handleSaveTag = async () => {
+    if (!tagName.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Preencha o nome da tag.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingTag(true);
+    
+    try {
+      const slug = generateSlug(tagName);
+      
+      if (editingTag) {
+        const { error } = await supabase
+          .from('tags')
+          .update({ name: tagName.trim(), slug })
+          .eq('id', editingTag.id);
+        
+        if (error) throw error;
+        toast({ title: 'Tag atualizada com sucesso!' });
+      } else {
+        const { error } = await supabase
+          .from('tags')
+          .insert({ name: tagName.trim(), slug });
+        
+        if (error) throw error;
+        toast({ title: 'Tag criada com sucesso!' });
+      }
+
+      setIsTagDialogOpen(false);
+      resetTagForm();
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+    
+    setIsSavingTag(false);
+  };
+
+  const handleDeleteTag = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tag?')) return;
+    
+    const { error } = await supabase.from('tags').delete().eq('id', id);
+    
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Tag excluída!' });
+      fetchData();
+    }
+  };
+
+  const toggleTagSelection = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
   if (loading || isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -275,7 +408,7 @@ const Admin = () => {
 
       <main className="container mx-auto py-8 px-4">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total de Notícias</CardTitle>
@@ -308,196 +441,346 @@ const Admin = () => {
               <p className="text-3xl font-bold">{categories.length}</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Tags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{tags.length}</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* News Management */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              Gerenciar Notícias
-            </CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Notícia
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingNews ? 'Editar Notícia' : 'Nova Notícia'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Título *</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Título da notícia"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoria *</Label>
-                    <Select value={categoryId} onValueChange={setCategoryId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="excerpt">Resumo</Label>
-                    <Textarea
-                      id="excerpt"
-                      value={excerpt}
-                      onChange={(e) => setExcerpt(e.target.value)}
-                      placeholder="Breve resumo da notícia"
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Conteúdo</Label>
-                    <Textarea
-                      id="content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Conteúdo completo da notícia"
-                      rows={6}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="image">Imagem</Label>
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    />
-                    {imageUrl && !imageFile && (
-                      <img src={imageUrl} alt="Preview" className="mt-2 h-32 object-cover rounded" />
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="featured"
-                        checked={isFeatured}
-                        onCheckedChange={setIsFeatured}
-                      />
-                      <Label htmlFor="featured">Destaque</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="published"
-                        checked={isPublished}
-                        onCheckedChange={setIsPublished}
-                      />
-                      <Label htmlFor="published">Publicar</Label>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancelar
+        <Tabs defaultValue="news" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="news" className="flex items-center gap-2">
+              <Newspaper className="h-4 w-4" />
+              Notícias
+            </TabsTrigger>
+            <TabsTrigger value="tags" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Tags
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="news">
+            {/* News Management */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Newspaper className="h-5 w-5" />
+                  Gerenciar Notícias
+                </CardTitle>
+                <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) resetForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Notícia
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving}>
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        'Salvar'
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {news.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      Nenhuma notícia cadastrada. Clique em "Nova Notícia" para começar.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  news.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium max-w-xs truncate">
-                        {item.title}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {item.categories?.name || 'Sem categoria'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {item.is_published ? (
-                          <Badge className="bg-green-600">Publicado</Badge>
-                        ) : (
-                          <Badge variant="secondary">Rascunho</Badge>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingNews ? 'Editar Notícia' : 'Nova Notícia'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Título *</Label>
+                        <Input
+                          id="title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Título da notícia"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Categoria *</Label>
+                        <Select value={categoryId} onValueChange={setCategoryId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Tags</Label>
+                        <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/30">
+                          {tags.length === 0 ? (
+                            <span className="text-sm text-muted-foreground">Nenhuma tag disponível</span>
+                          ) : (
+                            tags.map((tag) => (
+                              <Badge
+                                key={tag.id}
+                                variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
+                                className="cursor-pointer transition-colors"
+                                onClick={() => toggleTagSelection(tag.id)}
+                              >
+                                {tag.name}
+                                {selectedTagIds.includes(tag.id) && (
+                                  <X className="ml-1 h-3 w-3" />
+                                )}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="excerpt">Resumo</Label>
+                        <Textarea
+                          id="excerpt"
+                          value={excerpt}
+                          onChange={(e) => setExcerpt(e.target.value)}
+                          placeholder="Breve resumo da notícia"
+                          rows={2}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="content">Conteúdo</Label>
+                        <Textarea
+                          id="content"
+                          value={content}
+                          onChange={(e) => setContent(e.target.value)}
+                          placeholder="Conteúdo completo da notícia"
+                          rows={6}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="image">Imagem</Label>
+                        <Input
+                          id="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                        />
+                        {imageUrl && !imageFile && (
+                          <img src={imageUrl} alt="Preview" className="mt-2 h-32 object-cover rounded" />
                         )}
-                        {item.is_featured && (
-                          <Badge className="ml-1 bg-yellow-600">Destaque</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(item.created_at).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
+                      </div>
+                      
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="featured"
+                            checked={isFeatured}
+                            onCheckedChange={setIsFeatured}
+                          />
+                          <Label htmlFor="featured">Destaque</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="published"
+                            checked={isPublished}
+                            onCheckedChange={setIsPublished}
+                          />
+                          <Label htmlFor="published">Publicar</Label>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                          Cancelar
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button onClick={handleSave} disabled={isSaving}>
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            'Salvar'
+                          )}
                         </Button>
-                      </TableCell>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {news.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Nenhuma notícia cadastrada. Clique em "Nova Notícia" para começar.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      news.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium max-w-xs truncate">
+                            {item.title}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {item.categories?.name || 'Sem categoria'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {item.is_published ? (
+                              <Badge className="bg-green-600">Publicado</Badge>
+                            ) : (
+                              <Badge variant="secondary">Rascunho</Badge>
+                            )}
+                            {item.is_featured && (
+                              <Badge className="ml-1 bg-yellow-600">Destaque</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="tags">
+            {/* Tags Management */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Gerenciar Tags
+                </CardTitle>
+                <Dialog open={isTagDialogOpen} onOpenChange={(open) => {
+                  setIsTagDialogOpen(open);
+                  if (!open) resetTagForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Tag
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingTag ? 'Editar Tag' : 'Nova Tag'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tagName">Nome da Tag *</Label>
+                        <Input
+                          id="tagName"
+                          value={tagName}
+                          onChange={(e) => setTagName(e.target.value)}
+                          placeholder="Ex: Política, Economia, Esportes..."
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsTagDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveTag} disabled={isSavingTag}>
+                          {isSavingTag ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            'Salvar'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tags.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          Nenhuma tag cadastrada. Clique em "Nova Tag" para começar.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      tags.map((tag) => (
+                        <TableRow key={tag.id}>
+                          <TableCell className="font-medium">
+                            <Badge variant="secondary">{tag.name}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {tag.slug}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditTagDialog(tag)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteTag(tag.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
