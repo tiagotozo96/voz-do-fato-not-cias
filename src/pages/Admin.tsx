@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,8 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  color: string | null;
+  icon: string | null;
 }
 
 interface TagItem {
@@ -86,6 +88,14 @@ const Admin = () => {
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
   const [tagName, setTagName] = useState('');
   const [isSavingTag, setIsSavingTag] = useState(false);
+
+  // Category management state
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryColor, setCategoryColor] = useState('#dc2626');
+  const [categoryIcon, setCategoryIcon] = useState('');
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -376,6 +386,95 @@ const Admin = () => {
     );
   };
 
+  // Category management functions
+  const resetCategoryForm = () => {
+    setCategoryName('');
+    setCategoryColor('#dc2626');
+    setCategoryIcon('');
+    setEditingCategory(null);
+  };
+
+  const openEditCategoryDialog = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryName(category.name);
+    setCategoryColor(category.color || '#dc2626');
+    setCategoryIcon(category.icon || '');
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryName.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Preencha o nome da categoria.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingCategory(true);
+    
+    try {
+      const slug = generateSlug(categoryName);
+      
+      if (editingCategory) {
+        const { error } = await supabase
+          .from('categories')
+          .update({ 
+            name: categoryName.trim(), 
+            slug,
+            color: categoryColor,
+            icon: categoryIcon || null
+          })
+          .eq('id', editingCategory.id);
+        
+        if (error) throw error;
+        toast({ title: 'Categoria atualizada com sucesso!' });
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .insert({ 
+            name: categoryName.trim(), 
+            slug,
+            color: categoryColor,
+            icon: categoryIcon || null
+          });
+        
+        if (error) throw error;
+        toast({ title: 'Categoria criada com sucesso!' });
+      }
+
+      setIsCategoryDialogOpen(false);
+      resetCategoryForm();
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+    
+    setIsSavingCategory(false);
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta categoria? Notícias vinculadas ficarão sem categoria.')) return;
+    
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Categoria excluída!' });
+      fetchData();
+    }
+  };
+
   if (loading || isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -456,6 +555,10 @@ const Admin = () => {
             <TabsTrigger value="news" className="flex items-center gap-2">
               <Newspaper className="h-4 w-4" />
               Notícias
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categorias
             </TabsTrigger>
             <TabsTrigger value="tags" className="flex items-center gap-2">
               <Tag className="h-4 w-4" />
@@ -664,6 +767,154 @@ const Admin = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="categories">
+            {/* Categories Management */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Gerenciar Categorias
+                </CardTitle>
+                <Dialog open={isCategoryDialogOpen} onOpenChange={(open) => {
+                  setIsCategoryDialogOpen(open);
+                  if (!open) resetCategoryForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Categoria
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="categoryName">Nome da Categoria *</Label>
+                        <Input
+                          id="categoryName"
+                          value={categoryName}
+                          onChange={(e) => setCategoryName(e.target.value)}
+                          placeholder="Ex: Política, Economia, Esportes..."
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="categoryColor">Cor</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="categoryColor"
+                            type="color"
+                            value={categoryColor}
+                            onChange={(e) => setCategoryColor(e.target.value)}
+                            className="w-16 h-10 p-1 cursor-pointer"
+                          />
+                          <Input
+                            value={categoryColor}
+                            onChange={(e) => setCategoryColor(e.target.value)}
+                            placeholder="#dc2626"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="categoryIcon">Ícone (nome do Lucide icon)</Label>
+                        <Input
+                          id="categoryIcon"
+                          value={categoryIcon}
+                          onChange={(e) => setCategoryIcon(e.target.value)}
+                          placeholder="Ex: newspaper, globe, trophy..."
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveCategory} disabled={isSavingCategory}>
+                          {isSavingCategory ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            'Salvar'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead>Cor</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          Nenhuma categoria cadastrada. Clique em "Nova Categoria" para começar.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      categories.map((category) => (
+                        <TableRow key={category.id}>
+                          <TableCell className="font-medium">
+                            <Badge 
+                              style={{ backgroundColor: category.color || '#dc2626' }}
+                              className="text-white"
+                            >
+                              {category.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {category.slug}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-6 h-6 rounded border"
+                                style={{ backgroundColor: category.color || '#dc2626' }}
+                              />
+                              <span className="text-sm text-muted-foreground">{category.color}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditCategoryDialog(category)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteCategory(category.id)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
