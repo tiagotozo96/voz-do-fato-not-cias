@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NewsPreview } from '@/components/NewsPreview';
+import { RichTextEditor } from '@/components/RichTextEditor';
 
 interface Category {
   id: string;
@@ -656,13 +657,11 @@ const Admin = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="content">Conteúdo</Label>
-                        <Textarea
-                          id="content"
-                          value={content}
-                          onChange={(e) => setContent(e.target.value)}
-                          placeholder="Conteúdo completo da notícia"
-                          rows={6}
+                        <Label>Conteúdo</Label>
+                        <RichTextEditor
+                          content={content}
+                          onChange={setContent}
+                          placeholder="Escreva o conteúdo completo da notícia..."
                         />
                       </div>
                       
