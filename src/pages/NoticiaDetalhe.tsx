@@ -346,17 +346,12 @@ const NoticiaDetalhe = () => {
             )}
 
             {/* Content */}
-            <div className="prose prose-lg max-w-none">
-              {news.content ? (
-                news.content.split("\n\n").map((paragraph, index) => (
-                  <p key={index} className="text-foreground/90 leading-relaxed mb-4">
-                    {paragraph}
-                  </p>
-                ))
-              ) : news.excerpt ? (
-                <p className="text-foreground/90 leading-relaxed mb-4">{news.excerpt}</p>
-              ) : null}
-            </div>
+            <div 
+              className="prose prose-lg max-w-none [&>p]:text-foreground/90 [&>p]:leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-4 [&>blockquote]:border-l-4 [&>blockquote]:border-primary [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-muted-foreground [&>a]:text-primary [&>a]:underline [&>img]:max-w-full [&>img]:rounded-lg [&>img]:my-4"
+              dangerouslySetInnerHTML={{ 
+                __html: news.content || news.excerpt || '' 
+              }}
+            />
 
             {/* Tags */}
             {tags.length > 0 && (
