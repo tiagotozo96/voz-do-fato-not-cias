@@ -29,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NewsPreview } from '@/components/NewsPreview';
 
 interface Category {
   id: string;
@@ -96,6 +97,9 @@ const Admin = () => {
   const [categoryColor, setCategoryColor] = useState('#dc2626');
   const [categoryIcon, setCategoryIcon] = useState('');
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+
+  // Preview state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -694,22 +698,49 @@ const Admin = () => {
                         </div>
                       </div>
                       
-                      <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancelar
+                      <div className="flex justify-between gap-2 pt-4">
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          onClick={() => setIsPreviewOpen(true)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Preview
                         </Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                          {isSaving ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Salvando...
-                            </>
-                          ) : (
-                            'Salvar'
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                            Cancelar
+                          </Button>
+                          <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Salvando...
+                              </>
+                            ) : (
+                              'Salvar'
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Preview Dialog */}
+                <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                  <DialogContent className="max-w-4xl max-h-[95vh]">
+                    <DialogHeader>
+                      <DialogTitle>Preview da Notícia</DialogTitle>
+                    </DialogHeader>
+                    <NewsPreview
+                      title={title}
+                      excerpt={excerpt}
+                      content={content}
+                      imageUrl={imageFile ? URL.createObjectURL(imageFile) : imageUrl}
+                      categoryName={categories.find(c => c.id === categoryId)?.name || ''}
+                      tags={tags.filter(t => selectedTagIds.includes(t.id))}
+                    />
                   </DialogContent>
                 </Dialog>
               </CardHeader>
