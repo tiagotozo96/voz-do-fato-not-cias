@@ -10,7 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +63,7 @@ interface News {
   is_published: boolean;
   published_at: string;
   created_at: string;
+  scheduled_at: string | null;
   categories: Category | null;
 }
 
@@ -84,6 +90,8 @@ const Admin = () => {
   const [isPublished, setIsPublished] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>(undefined);
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   
   // Tag management state
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
@@ -177,6 +185,8 @@ const Admin = () => {
     setImageFile(null);
     setEditingNews(null);
     setSelectedTagIds([]);
+    setScheduledAt(undefined);
+    setScheduledTime('09:00');
   };
 
   const openEditDialog = async (newsItem: News) => {
@@ -188,6 +198,16 @@ const Admin = () => {
     setCategoryId(newsItem.category_id || '');
     setIsFeatured(newsItem.is_featured);
     setIsPublished(newsItem.is_published);
+    
+    // Set scheduled date/time if exists
+    if (newsItem.scheduled_at) {
+      const scheduledDate = new Date(newsItem.scheduled_at);
+      setScheduledAt(scheduledDate);
+      setScheduledTime(format(scheduledDate, 'HH:mm'));
+    } else {
+      setScheduledAt(undefined);
+      setScheduledTime('09:00');
+    }
     
     // Fetch tags for this news
     const { data: newsTags } = await supabase
@@ -222,6 +242,16 @@ const Admin = () => {
       }
 
       const slug = generateSlug(title);
+      
+      // Calculate scheduled_at datetime
+      let scheduledAtISO: string | null = null;
+      if (scheduledAt && !isPublished) {
+        const [hours, minutes] = scheduledTime.split(':').map(Number);
+        const scheduledDateTime = new Date(scheduledAt);
+        scheduledDateTime.setHours(hours, minutes, 0, 0);
+        scheduledAtISO = scheduledDateTime.toISOString();
+      }
+      
       const newsData = {
         title,
         slug: editingNews ? editingNews.slug : slug,
@@ -232,6 +262,7 @@ const Admin = () => {
         is_featured: isFeatured,
         is_published: isPublished,
         published_at: isPublished ? new Date().toISOString() : null,
+        scheduled_at: scheduledAtISO,
         author_id: user?.id,
       };
 
@@ -691,11 +722,73 @@ const Admin = () => {
                           <Switch
                             id="published"
                             checked={isPublished}
-                            onCheckedChange={setIsPublished}
+                            onCheckedChange={(checked) => {
+                              setIsPublished(checked);
+                              if (checked) {
+                                setScheduledAt(undefined);
+                              }
+                            }}
                           />
-                          <Label htmlFor="published">Publicar</Label>
+                          <Label htmlFor="published">Publicar agora</Label>
                         </div>
                       </div>
+                      
+                      {/* Scheduled publishing */}
+                      {!isPublished && (
+                        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Label className="font-medium">Agendar publicação</Label>
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-[200px] justify-start text-left font-normal",
+                                    !scheduledAt && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {scheduledAt ? format(scheduledAt, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={scheduledAt}
+                                  onSelect={setScheduledAt}
+                                  disabled={(date) => date < new Date()}
+                                  initialFocus
+                                  className="p-3 pointer-events-auto"
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Input
+                              type="time"
+                              value={scheduledTime}
+                              onChange={(e) => setScheduledTime(e.target.value)}
+                              className="w-[120px]"
+                            />
+                            {scheduledAt && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setScheduledAt(undefined)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          {scheduledAt && (
+                            <p className="text-sm text-muted-foreground">
+                              A notícia será publicada em {format(scheduledAt, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} às {scheduledTime}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       
                       <div className="flex justify-between gap-2 pt-4">
                         <Button 
@@ -775,6 +868,11 @@ const Admin = () => {
                           <TableCell>
                             {item.is_published ? (
                               <Badge className="bg-green-600">Publicado</Badge>
+                            ) : item.scheduled_at ? (
+                              <Badge className="bg-blue-600">
+                                <Clock className="mr-1 h-3 w-3" />
+                                {format(new Date(item.scheduled_at), "dd/MM HH:mm")}
+                              </Badge>
                             ) : (
                               <Badge variant="secondary">Rascunho</Badge>
                             )}
