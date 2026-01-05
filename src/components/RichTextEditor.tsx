@@ -35,7 +35,9 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o conteúdo aqui...' }: RichTextEditorProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -117,6 +119,33 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     e.target.value = '';
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!editorContainerRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      handleImageUpload(imageFile);
+    }
+  };
+
   if (!editor) {
     return null;
   }
@@ -162,7 +191,25 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   );
 
   return (
-    <div className="border border-input rounded-md overflow-hidden">
+    <div 
+      ref={editorContainerRef}
+      className={cn(
+        "border border-input rounded-md overflow-hidden relative transition-colors",
+        isDragging && "border-primary border-2 bg-primary/5"
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center z-10 pointer-events-none">
+          <div className="bg-background border border-primary rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
+            <span className="font-medium text-primary">Solte a imagem aqui</span>
+          </div>
+        </div>
+      )}
       {/* Toolbar */}
       <div className="flex flex-wrap gap-0.5 p-1 border-b border-input bg-muted/30">
         <ToolbarButton
