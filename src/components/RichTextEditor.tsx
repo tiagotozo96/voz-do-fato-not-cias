@@ -1,8 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -52,7 +52,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           class: 'text-primary underline',
         },
       }),
-      Image.configure({
+      ResizableImageExtension.configure({
         HTMLAttributes: {
           class: 'max-w-full rounded-lg',
         },
