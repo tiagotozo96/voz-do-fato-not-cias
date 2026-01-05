@@ -1,1 +1,4 @@
 project_id = "eebyqnqnmujguosbuxxx"
+
+[functions.publish-scheduled-news]
+verify_jwt = false
