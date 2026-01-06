@@ -8,11 +8,14 @@ type ImageAlign = 'left' | 'center' | 'right';
 
 export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewProps) => {
   const [isResizing, setIsResizing] = useState(false);
+  const [isEditingCaption, setIsEditingCaption] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
+  const captionInputRef = useRef<HTMLInputElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
   const align = (node.attrs.align as ImageAlign) || 'center';
+  const caption = (node.attrs.caption as string) || '';
 
   const handleMouseDown = useCallback((e: React.MouseEvent, corner: string) => {
     e.preventDefault();
@@ -47,6 +50,19 @@ export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewPro
     updateAttributes({ align: newAlign });
   };
 
+  const handleCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateAttributes({ caption: e.target.value });
+  };
+
+  const handleCaptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setIsEditingCaption(false);
+    }
+    if (e.key === 'Escape') {
+      setIsEditingCaption(false);
+    }
+  };
+
   const wrapperClasses = cn(
     "my-2",
     align === 'center' && "flex justify-center",
@@ -56,27 +72,55 @@ export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewPro
 
   return (
     <NodeViewWrapper className={wrapperClasses}>
-      <div 
+      <figure 
         className={cn(
           "relative inline-block group",
-          selected && "ring-2 ring-primary ring-offset-2",
+          selected && "ring-2 ring-primary ring-offset-2 rounded-lg",
           isResizing && "select-none"
         )}
       >
         <img
           ref={imageRef}
           src={node.attrs.src}
-          alt={node.attrs.alt || ''}
+          alt={node.attrs.alt || caption || ''}
           style={{ width: node.attrs.width ? `${node.attrs.width}px` : 'auto' }}
           className="max-w-full rounded-lg block"
           draggable={false}
         />
         
+        {/* Caption */}
+        <figcaption className="mt-2 text-center">
+          {isEditingCaption ? (
+            <input
+              ref={captionInputRef}
+              type="text"
+              value={caption}
+              onChange={handleCaptionChange}
+              onKeyDown={handleCaptionKeyDown}
+              onBlur={() => setIsEditingCaption(false)}
+              placeholder="Adicionar legenda..."
+              className="w-full text-sm text-muted-foreground bg-transparent border-b border-primary/50 focus:border-primary outline-none text-center px-2 py-1"
+              autoFocus
+            />
+          ) : (
+            <span
+              onClick={() => selected && setIsEditingCaption(true)}
+              className={cn(
+                "text-sm text-muted-foreground block px-2 py-1 min-h-[28px]",
+                selected && "cursor-text hover:bg-muted/50 rounded transition-colors",
+                !caption && selected && "italic opacity-60"
+              )}
+            >
+              {caption || (selected ? "Clique para adicionar legenda..." : "")}
+            </span>
+          )}
+        </figcaption>
+        
         {/* Controls - only show when selected */}
         {selected && (
           <>
             {/* Alignment toolbar */}
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-background border border-border rounded-lg shadow-lg flex gap-0.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-background border border-border rounded-lg shadow-lg flex gap-0.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
               <Button
                 type="button"
                 variant={align === 'left' ? 'secondary' : 'ghost'}
@@ -111,31 +155,31 @@ export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewPro
 
             {/* Resize handles */}
             <div
-              className="absolute -top-1 -left-1 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-0 left-0 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
               onMouseDown={(e) => handleMouseDown(e, 'top-left')}
             />
             <div
-              className="absolute -top-1 -right-1 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-0 right-0 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
               onMouseDown={(e) => handleMouseDown(e, 'top-right')}
             />
             <div
-              className="absolute -bottom-1 -left-1 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute bottom-8 left-0 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
               onMouseDown={(e) => handleMouseDown(e, 'bottom-left')}
             />
             <div
-              className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute bottom-8 right-0 w-3 h-3 bg-primary border-2 border-background rounded-sm cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
               onMouseDown={(e) => handleMouseDown(e, 'bottom-right')}
             />
             
             {/* Size indicator */}
             {node.attrs.width && (
-              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-foreground/80 text-background text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-foreground/80 text-background text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                 {Math.round(node.attrs.width)}px
               </div>
             )}
           </>
         )}
-      </div>
+      </figure>
     </NodeViewWrapper>
   );
 };
