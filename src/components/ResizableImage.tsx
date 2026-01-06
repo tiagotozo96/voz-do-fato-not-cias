@@ -1,12 +1,12 @@
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import { useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type ImageAlign = 'left' | 'center' | 'right';
 
-export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewProps) => {
+export const ResizableImage = ({ node, updateAttributes, selected, deleteNode }: NodeViewProps) => {
   const [isResizing, setIsResizing] = useState(false);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -150,6 +150,19 @@ export const ResizableImage = ({ node, updateAttributes, selected }: NodeViewPro
                 title="Alinhar à direita"
               >
                 <AlignRight className="h-4 w-4" />
+              </Button>
+              
+              <div className="w-px h-6 bg-border mx-0.5 self-center" />
+              
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => deleteNode()}
+                title="Excluir imagem"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
 
