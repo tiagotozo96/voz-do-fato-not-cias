@@ -10,7 +10,8 @@ import { TikTokExtension } from '@/extensions/TikTokExtension';
 import { SpotifyExtension } from '@/extensions/SpotifyExtension';
 import { GoogleMapsExtension } from '@/extensions/GoogleMapsExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { GoogleMapsPreviewDialog } from '@/components/GoogleMapsPreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -60,6 +61,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showMapsDialog, setShowMapsDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -257,15 +259,14 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
-  const addGoogleMapsEmbed = () => {
-    const url = window.prompt('URL do Google Maps (copie o link de compartilhamento ou embed):');
-    if (url) {
-      const success = editor.chain().focus().setGoogleMapsEmbed({ src: url }).run();
-      if (!success) {
-        toast.error('URL do Google Maps inválida. Use o link de compartilhamento ou o código de embed do Google Maps.');
-      }
-    }
-  };
+  const openGoogleMapsDialog = useCallback(() => {
+    setShowMapsDialog(true);
+  }, []);
+
+  const handleGoogleMapsInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setGoogleMapsEmbed({ src: url }).run();
+  }, [editor]);
 
   const ToolbarButton = ({ 
     onClick, 
@@ -300,7 +301,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: Instagram, label: 'Instagram', onClick: addInstagramEmbed },
     { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
     { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
-    { icon: MapPin, label: 'Google Maps', onClick: addGoogleMapsEmbed },
+    { icon: MapPin, label: 'Google Maps', onClick: openGoogleMapsDialog },
   ];
 
   return (
@@ -486,6 +487,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       <EditorContent 
         editor={editor} 
         className="prose prose-sm max-w-none p-3 min-h-[200px] focus:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_div[data-youtube-video]]:my-4 [&_.ProseMirror_div[data-youtube-video]]:flex [&_.ProseMirror_div[data-youtube-video]]:justify-center [&_.ProseMirror_div[data-youtube-video]_iframe]:rounded-lg [&_.ProseMirror_div[data-youtube-video]_iframe]:max-w-full [&_.ProseMirror_div[data-youtube-video]_iframe]:aspect-video"
+      />
+
+      {/* Google Maps Preview Dialog */}
+      <GoogleMapsPreviewDialog
+        open={showMapsDialog}
+        onOpenChange={setShowMapsDialog}
+        onInsert={handleGoogleMapsInsert}
       />
     </div>
   );
