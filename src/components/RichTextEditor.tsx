@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { GoogleMapsPreviewDialog } from '@/components/GoogleMapsPreviewDialog';
 import { FacebookPreviewDialog } from '@/components/FacebookPreviewDialog';
 import { InstagramPreviewDialog } from '@/components/InstagramPreviewDialog';
+import { YoutubePreviewDialog } from '@/components/YoutubePreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -68,6 +69,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const [showMapsDialog, setShowMapsDialog] = useState(false);
   const [showFacebookDialog, setShowFacebookDialog] = useState(false);
   const [showInstagramDialog, setShowInstagramDialog] = useState(false);
+  const [showYoutubeDialog, setShowYoutubeDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -218,6 +220,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     return editor.chain().focus().setInstagramEmbed({ src: url }).run();
   }, [editor]);
 
+  const openYoutubeDialog = useCallback(() => {
+    setShowYoutubeDialog(true);
+  }, []);
+
+  const handleYoutubeInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setYoutubeVideo({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -236,12 +247,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
-  const addYoutubeVideo = () => {
-    const url = window.prompt('URL do vídeo do YouTube:');
-    if (url) {
-      editor.chain().focus().setYoutubeVideo({ src: url }).run();
-    }
-  };
 
   const addVimeoVideo = () => {
     const url = window.prompt('URL do vídeo do Vimeo:');
@@ -312,7 +317,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   );
 
   const mediaEmbeds = [
-    { icon: YoutubeIcon, label: 'YouTube', onClick: addYoutubeVideo },
+    { icon: YoutubeIcon, label: 'YouTube', onClick: openYoutubeDialog },
     { icon: Video, label: 'Vimeo', onClick: addVimeoVideo },
     { icon: Twitter, label: 'Twitter/X', onClick: addTwitterEmbed },
     { icon: Instagram, label: 'Instagram', onClick: openInstagramDialog },
@@ -526,6 +531,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         open={showInstagramDialog}
         onOpenChange={setShowInstagramDialog}
         onInsert={handleInstagramInsert}
+      />
+
+      {/* YouTube Preview Dialog */}
+      <YoutubePreviewDialog
+        open={showYoutubeDialog}
+        onOpenChange={setShowYoutubeDialog}
+        onInsert={handleYoutubeInsert}
       />
     </div>
   );
