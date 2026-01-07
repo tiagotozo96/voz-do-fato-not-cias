@@ -19,7 +19,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, PieChartIcon, BarChart3, Calendar, Eye, Loader2 } from 'lucide-react';
+import { TrendingUp, PieChartIcon, BarChart3, Calendar, Eye, Loader2, Users, Mail, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -49,6 +49,15 @@ interface ViewsHistory {
   view_count: number;
 }
 
+interface Subscriber {
+  id: string;
+  email: string;
+  is_active: boolean;
+  is_confirmed: boolean;
+  subscribed_at: string;
+  unsubscribed_at: string | null;
+}
+
 interface DashboardChartsProps {
   news: NewsItem[];
   categories: Category[];
@@ -58,11 +67,14 @@ const COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6
 
 export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
   const [viewsHistory, setViewsHistory] = useState<ViewsHistory[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isLoadingSubscribers, setIsLoadingSubscribers] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d'>('7d');
 
   useEffect(() => {
     fetchViewsHistory();
+    fetchSubscribers();
   }, [period]);
 
   const fetchViewsHistory = async () => {
@@ -83,6 +95,23 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
       console.error('Erro ao carregar histórico:', error);
     } finally {
       setIsLoadingHistory(false);
+    }
+  };
+
+  const fetchSubscribers = async () => {
+    setIsLoadingSubscribers(true);
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('id, email, is_active, is_confirmed, subscribed_at, unsubscribed_at')
+        .order('subscribed_at', { ascending: true });
+
+      if (error) throw error;
+      setSubscribers(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar assinantes:', error);
+    } finally {
+      setIsLoadingSubscribers(false);
     }
   };
 
@@ -131,6 +160,68 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
     }
     return days;
   }, [news, period]);
+
+  // Subscribers growth per day (cumulative)
+  const subscribersGrowth = useMemo(() => {
+    const daysCount = period === '7d' ? 7 : 30;
+    const days = [];
+    
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const date = startOfDay(subDays(new Date(), i));
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      // Count total subscribers up to this date
+      const totalActive = subscribers.filter(s => {
+        const subscribedDate = format(parseISO(s.subscribed_at), 'yyyy-MM-dd');
+        const wasSubscribedByDate = subscribedDate <= dateStr;
+        const isStillActive = s.is_active && s.is_confirmed && 
+          (!s.unsubscribed_at || format(parseISO(s.unsubscribed_at), 'yyyy-MM-dd') > dateStr);
+        return wasSubscribedByDate && isStillActive;
+      }).length;
+
+      // New subscribers on this specific day
+      const newOnDay = subscribers.filter(s => {
+        const subscribedDate = format(parseISO(s.subscribed_at), 'yyyy-MM-dd');
+        return subscribedDate === dateStr;
+      }).length;
+      
+      days.push({
+        date: format(date, period === '7d' ? 'EEE' : 'dd/MM', { locale: ptBR }),
+        fullDate: format(date, 'dd/MM/yyyy', { locale: ptBR }),
+        total: totalActive,
+        novos: newOnDay
+      });
+    }
+    return days;
+  }, [subscribers, period]);
+
+  // Subscriber stats
+  const subscriberStats = useMemo(() => {
+    const activeConfirmed = subscribers.filter(s => s.is_active && s.is_confirmed).length;
+    const pending = subscribers.filter(s => !s.is_confirmed && s.is_active).length;
+    const unsubscribed = subscribers.filter(s => !s.is_active || s.unsubscribed_at).length;
+    
+    const daysAgo = period === '7d' ? 7 : 30;
+    const startDate = format(subDays(new Date(), daysAgo), 'yyyy-MM-dd');
+    const newInPeriod = subscribers.filter(s => {
+      const subscribedDate = format(parseISO(s.subscribed_at), 'yyyy-MM-dd');
+      return subscribedDate >= startDate;
+    }).length;
+
+    // Calculate growth rate
+    const previousPeriodStart = format(subDays(new Date(), daysAgo * 2), 'yyyy-MM-dd');
+    const previousPeriodEnd = format(subDays(new Date(), daysAgo), 'yyyy-MM-dd');
+    const newInPreviousPeriod = subscribers.filter(s => {
+      const subscribedDate = format(parseISO(s.subscribed_at), 'yyyy-MM-dd');
+      return subscribedDate >= previousPeriodStart && subscribedDate < previousPeriodEnd;
+    }).length;
+
+    const growthRate = newInPreviousPeriod > 0 
+      ? ((newInPeriod - newInPreviousPeriod) / newInPreviousPeriod * 100).toFixed(1)
+      : newInPeriod > 0 ? '100' : '0';
+
+    return { activeConfirmed, pending, unsubscribed, newInPeriod, growthRate: parseFloat(growthRate) };
+  }, [subscribers, period]);
 
   // Views by category
   const viewsByCategory = useMemo(() => {
@@ -233,8 +324,8 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
         </Tabs>
       </div>
 
-      {/* Views Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -275,22 +366,77 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <Mail className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Publicações</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {publicationsPerDay.reduce((sum, d) => sum + d.publicações, 0)}
+                <p className="text-sm text-muted-foreground">Assinantes Ativos</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {isLoadingSubscribers ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    subscriberStats.activeConfirmed.toLocaleString('pt-BR')
+                  )}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
+        
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Novos Assinantes</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {isLoadingSubscribers ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      `+${subscriberStats.newInPeriod}`
+                    )}
+                  </p>
+                  {!isLoadingSubscribers && subscriberStats.growthRate !== 0 && (
+                    <span className={`text-xs flex items-center ${subscriberStats.growthRate > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {subscriberStats.growthRate > 0 ? (
+                        <ArrowUpRight className="h-3 w-3" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3" />
+                      )}
+                      {Math.abs(subscriberStats.growthRate)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Publication stats card */}
+      <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Publicações no Período</p>
+                <p className="text-xl font-bold text-amber-600">
+                  {publicationsPerDay.reduce((sum, d) => sum + d.publicações, 0)} notícias
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* First row - Time-based charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -471,6 +617,103 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
                 <div className="h-full flex items-center justify-center text-muted-foreground">
                   Nenhuma notícia com visualizações
                 </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Third row - Subscribers Growth */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Subscribers growth chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" />
+              Crescimento de Assinantes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              {isLoadingSubscribers ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={subscribersGrowth}>
+                    <defs>
+                      <linearGradient id="colorSubscribers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      interval={period === '30d' ? 4 : 0}
+                    />
+                    <YAxis 
+                      allowDecimals={false}
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="total" 
+                      name="Total Assinantes"
+                      stroke="#8b5cf6" 
+                      strokeWidth={2}
+                      fill="url(#colorSubscribers)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* New subscribers per day */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Mail className="h-4 w-4 text-primary" />
+              Novos Assinantes por Dia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              {isLoadingSubscribers ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subscribersGrowth}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      interval={period === '30d' ? 4 : 0}
+                    />
+                    <YAxis 
+                      allowDecimals={false}
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar 
+                      dataKey="novos" 
+                      name="Novos Assinantes"
+                      fill="#8b5cf6" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </CardContent>
