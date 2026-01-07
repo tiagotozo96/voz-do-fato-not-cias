@@ -4,6 +4,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { YoutubeExtension } from '@/extensions/YoutubeExtension';
 import { VimeoExtension } from '@/extensions/VimeoExtension';
+import { TwitterExtension } from '@/extensions/TwitterExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,8 @@ import {
   Upload,
   Loader2,
   Youtube as YoutubeIcon,
-  Video
+  Video,
+  Twitter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,6 +72,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         width: 640,
         height: 360,
       }),
+      TwitterExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -190,6 +193,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       const success = editor.chain().focus().setVimeoVideo({ src: url }).run();
       if (!success) {
         toast.error('URL do Vimeo inválida. Use o formato: vimeo.com/123456789');
+      }
+    }
+  };
+
+  const addTwitterEmbed = () => {
+    const url = window.prompt('URL do tweet (Twitter/X):');
+    if (url) {
+      const success = editor.chain().focus().setTwitterEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do tweet inválida. Use o formato: twitter.com/user/status/123 ou x.com/user/status/123');
       }
     }
   };
@@ -350,6 +363,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Adicionar vídeo do Vimeo"
         >
           <Video className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addTwitterEmbed}
+          title="Adicionar tweet (Twitter/X)"
+        >
+          <Twitter className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
