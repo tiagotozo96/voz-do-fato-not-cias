@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { CategoryCircle } from "@/components/CategoryCircle";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { SEOHead } from "@/components/SEOHead";
 
 import brasilNews from "@/assets/brasil-news.jpg";
 import mundoNews from "@/assets/mundo-news.jpg";
@@ -119,6 +120,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead />
       <Header />
 
       <main className="flex-1">
@@ -128,7 +130,7 @@ const Index = () => {
         </section>
 
         {/* Categories Section */}
-        <section className="bg-muted py-8 border-y border-border">
+        <section className="bg-muted py-8 border-y border-border" aria-label="Categorias">
           <div className="container mx-auto px-4">
             <div className="flex gap-8 overflow-x-auto pb-4 justify-center scrollbar-hide">
               {categories.map((category) => (
@@ -143,12 +145,12 @@ const Index = () => {
         </section>
 
         {/* Featured News */}
-        <section className="container mx-auto px-4 py-12">
+        <section className="container mx-auto px-4 py-12" aria-label="Notícia em destaque">
           <NewsCard {...featuredNews} featured={true} />
         </section>
 
         {/* Police News Section - Highlighted */}
-        <section className="bg-gradient-to-r from-red-950/20 to-red-900/10 py-12 border-y-4 border-primary">
+        <section className="bg-gradient-to-r from-red-950/20 to-red-900/10 py-12 border-y-4 border-primary" aria-label="Notícias policiais">
           <div className="container mx-auto px-4">
             <div className="mb-8">
               <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4 flex items-center gap-3">
@@ -170,7 +172,7 @@ const Index = () => {
         </section>
 
         {/* Recent News Grid */}
-        <section className="container mx-auto px-4 pb-12">
+        <section className="container mx-auto px-4 pb-12" aria-label="Últimas notícias">
           <div className="mb-8">
             <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4">
               Últimas Notícias
@@ -189,7 +191,7 @@ const Index = () => {
         </section>
 
         {/* More News Section */}
-        <section className="bg-muted py-12">
+        <section className="bg-muted py-12" aria-label="Destaques da semana">
           <div className="container mx-auto px-4">
             <div className="mb-8">
               <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4">

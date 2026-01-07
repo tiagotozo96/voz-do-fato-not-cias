@@ -1,29 +1,80 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Voz do Fato - Portal de Notícias</title>
     <meta name="description" content="Voz do Fato: Portal de notícias com informações atualizadas sobre Brasil, mundo, economia, esportes e entretenimento" />
     <meta name="author" content="Voz do Fato" />
-    <meta name="keywords" content="notícias, brasil, mundo, economia, esportes, entretenimento, jornalismo" />
-
+    <meta name="keywords" content="notícias, brasil, mundo, economia, esportes, entretenimento, jornalismo, breaking news, atualidades" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#b91c1c" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+    <meta name="msapplication-TileColor" content="#b91c1c" />
+    
+    <!-- Open Graph / Facebook -->
     <meta property="og:title" content="Voz do Fato - Portal de Notícias" />
     <meta property="og:description" content="Portal de notícias com informações atualizadas sobre Brasil, mundo, economia, esportes e entretenimento" />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vozdofato.com.br" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Voz do Fato" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="fb:app_id" content="" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@VozDoFato" />
+    <meta name="twitter:creator" content="@VozDoFato" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Voz do Fato" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    
+    <!-- Canonical -->
+    <link rel="canonical" href="https://vozdofato.com.br" />
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/favicon.ico" as="image" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('SW registration failed:', error);
+            });
+        });
+      }
+    </script>
+    <noscript>
+      <style>.no-js-warning{display:block!important}</style>
+      <div class="no-js-warning" style="padding:20px;text-align:center;background:#b91c1c;color:white;">
+        Por favor, habilite o JavaScript para usar o site Voz do Fato.
+      </div>
+    </noscript>
   </body>
 </html>

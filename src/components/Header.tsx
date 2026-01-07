@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationButton } from "@/components/NotificationButton";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,21 +29,26 @@ export const Header = () => {
       <div className="bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 py-2 flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
-            <span>{new Date().toLocaleDateString('pt-BR', {
+            <span className="hidden sm:inline">{new Date().toLocaleDateString('pt-BR', {
               weekday: 'long',
               day: 'numeric',
               month: 'long',
               year: 'numeric'
             })}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <a href="#" className="hover:text-accent transition-colors">RSS</a>
-            <span>|</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <a href="#" className="hover:text-accent transition-colors hidden sm:inline">RSS</a>
+            <span className="hidden sm:inline">|</span>
             <a href="#" className="hover:text-accent transition-colors">Twitter</a>
             <span>|</span>
             <a href="#" className="hover:text-accent transition-colors">Instagram</a>
+            <span className="hidden sm:inline">|</span>
+            <a href="#" className="hover:text-accent transition-colors hidden sm:inline">Facebook</a>
             <span>|</span>
-            <a href="#" className="hover:text-accent transition-colors">Facebook</a>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <NotificationButton />
+            </div>
             <span>|</span>
             <Link to={user ? "/admin" : "/auth"} className="flex items-center gap-1 hover:text-accent transition-colors">
               <User className="h-3 w-3" />
