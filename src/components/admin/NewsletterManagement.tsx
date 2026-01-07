@@ -498,7 +498,15 @@ export const NewsletterManagement = () => {
                   {subscribers.length === 0 ? 'Nenhum assinante ainda.' : 'Nenhum assinante encontrado com este filtro.'}
                 </p>
               ) : (
-                <div className="border rounded-lg overflow-hidden">
+                <>
+                  <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                    <span>Ordenado por:</span>
+                    <Badge variant="outline" className="font-normal">
+                      {sortField === 'email' ? 'E-mail' : sortField === 'name' ? 'Nome' : 'Data de inscrição'}
+                      {' '}({sortDirection === 'asc' ? 'A-Z' : sortField === 'subscribed_at' ? 'mais recentes' : 'Z-A'})
+                    </Badge>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -624,36 +632,37 @@ export const NewsletterManagement = () => {
                     </TableBody>
                   </Table>
                 </div>
-              )}
-              {filteredSubscribers.length > itemsPerPage && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filteredSubscribers.length)} de {filteredSubscribers.length} assinantes
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Anterior
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Página {currentPage} de {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Próxima
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                {filteredSubscribers.length > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filteredSubscribers.length)} de {filteredSubscribers.length} assinantes
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Página {currentPage} de {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Próxima
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
+                </>
               )}
             </TabsContent>
             
