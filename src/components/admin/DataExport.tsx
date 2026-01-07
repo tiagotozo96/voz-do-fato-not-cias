@@ -492,13 +492,50 @@ export const DataExport = () => {
     setBackupFilename(null);
   };
 
-  const getResultsSummary = (results: Record<string, any>) => {
+  const getResultsSummary = (results: any) => {
+    if (!results || typeof results !== 'object') return 'Nenhum';
     const parts = [];
     if (results.categories?.restored) parts.push(`${results.categories.restored} cat.`);
     if (results.tags?.restored) parts.push(`${results.tags.restored} tags`);
     if (results.news?.restored) parts.push(`${results.news.restored} not.`);
     if (results.subscribers?.restored) parts.push(`${results.subscribers.restored} assin.`);
     return parts.join(', ') || 'Nenhum';
+  };
+
+  const exportRestorationHistoryCSV = () => {
+    if (restorationHistory.length === 0) {
+      toast({
+        title: 'Nenhum dado para exportar',
+        description: 'O histórico de restaurações está vazio.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const csvData = restorationHistory.map(item => ({
+      data_restauracao: format(new Date(item.restored_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+      status: item.status === 'success' ? 'Sucesso' : 'Falha',
+      arquivo_backup: item.backup_filename || 'Arquivo local',
+      data_backup: item.backup_date ? format(new Date(item.backup_date), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }) : '-',
+      noticias: item.options?.restoreNews ? 'Sim' : 'Não',
+      categorias: item.options?.restoreCategories ? 'Sim' : 'Não',
+      tags: item.options?.restoreTags ? 'Sim' : 'Não',
+      assinantes: item.options?.restoreSubscribers ? 'Sim' : 'Não',
+      limpeza_dados: item.options?.clearExisting ? 'Sim' : 'Não',
+      noticias_restauradas: item.results?.news?.restored || 0,
+      categorias_restauradas: item.results?.categories?.restored || 0,
+      tags_restauradas: item.results?.tags?.restored || 0,
+      assinantes_restaurados: item.results?.subscribers?.restored || 0,
+      erro: item.error_message || '',
+    }));
+
+    const filename = `historico-restauracoes-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    downloadCSV(csvData, filename);
+
+    toast({
+      title: 'Histórico exportado!',
+      description: `${restorationHistory.length} registros exportados para CSV.`,
+    });
   };
 
   return (
@@ -859,16 +896,28 @@ export const DataExport = () => {
                   ))}
                 </div>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-4"
-                onClick={fetchRestorationHistory}
-                disabled={isLoadingHistory}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingHistory ? 'animate-spin' : ''}`} />
-                Atualizar Histórico
-              </Button>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={fetchRestorationHistory}
+                  disabled={isLoadingHistory}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={exportRestorationHistoryCSV}
+                  disabled={restorationHistory.length === 0}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
