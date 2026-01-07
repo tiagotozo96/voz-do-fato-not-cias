@@ -1,22 +1,136 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Download, FileJson, FileSpreadsheet, Database, Users, Tag, FolderOpen, Newspaper, Mail } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2, Download, FileJson, FileSpreadsheet, Database, Tag, FolderOpen, Newspaper, Mail, Clock, Trash2, RefreshCw, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface BackupFile {
+  name: string;
+  created_at: string | null;
+  metadata: Record<string, any> | null;
+}
 
 export const DataExport = () => {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(true);
+  const [isRunningBackup, setIsRunningBackup] = useState(false);
+  const [savedBackups, setSavedBackups] = useState<BackupFile[]>([]);
   const [exportOptions, setExportOptions] = useState({
     news: true,
     categories: true,
     tags: true,
     subscribers: false,
   });
+
+  useEffect(() => {
+    fetchSavedBackups();
+  }, []);
+
+  const fetchSavedBackups = async () => {
+    setIsLoadingBackups(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('backups')
+        .list('', { sortBy: { column: 'created_at', order: 'desc' } });
+
+      if (error) throw error;
+      setSavedBackups(data || []);
+    } catch (error: any) {
+      console.error('Error fetching backups:', error);
+    }
+    setIsLoadingBackups(false);
+  };
+
+  const runScheduledBackupNow = async () => {
+    setIsRunningBackup(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scheduled-backup');
+      
+      if (error) throw error;
+
+      toast({
+        title: 'Backup executado!',
+        description: data?.filename ? `Arquivo ${data.filename} criado.` : 'Backup concluído com sucesso.',
+      });
+      fetchSavedBackups();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao executar backup',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+    setIsRunningBackup(false);
+  };
+
+  const downloadSavedBackup = async (filename: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('backups')
+        .download(filename);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Backup baixado!' });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao baixar backup',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteSavedBackup = async (filename: string) => {
+    if (!confirm('Tem certeza que deseja excluir este backup?')) return;
+
+    try {
+      const { error } = await supabase.storage
+        .from('backups')
+        .remove([filename]);
+
+      if (error) throw error;
+
+      toast({ title: 'Backup excluído!' });
+      fetchSavedBackups();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao excluir backup',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const toggleOption = (key: keyof typeof exportOptions) => {
     setExportOptions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -344,6 +458,106 @@ export const DataExport = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Scheduled Backups */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-purple-600" />
+                Backups Automáticos
+              </CardTitle>
+              <CardDescription>
+                Backups semanais são executados automaticamente todo domingo às 3h
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchSavedBackups}
+                disabled={isLoadingBackups}
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingBackups ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              <Button 
+                size="sm"
+                onClick={runScheduledBackupNow}
+                disabled={isRunningBackup}
+              >
+                {isRunningBackup ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Database className="h-4 w-4 mr-1" />
+                )}
+                Executar Agora
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBackups ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : savedBackups.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>Nenhum backup automático encontrado.</p>
+              <p className="text-sm">Clique em "Executar Agora" para criar o primeiro backup.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Arquivo</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tamanho</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {savedBackups.map((backup) => (
+                  <TableRow key={backup.name}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileJson className="h-4 w-4 text-blue-600" />
+                        {backup.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {backup.created_at ? format(new Date(backup.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {backup.metadata?.size ? formatFileSize(backup.metadata.size) : '-'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => downloadSavedBackup(backup.name)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteSavedBackup(backup.name)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
