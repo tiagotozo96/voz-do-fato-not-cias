@@ -21,6 +21,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -55,6 +62,7 @@ export const NewsletterManagement = () => {
   const [isSending, setIsSending] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
   
   // Form state
   const [subject, setSubject] = useState('');
@@ -224,6 +232,12 @@ export const NewsletterManagement = () => {
   const activeSubscribers = subscribers.filter(s => s.is_active && s.is_confirmed).length;
   const pendingSubscribers = subscribers.filter(s => !s.is_confirmed).length;
 
+  const filteredSubscribers = subscribers.filter(s => {
+    if (statusFilter === 'confirmed') return s.is_confirmed;
+    if (statusFilter === 'pending') return !s.is_confirmed;
+    return true;
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -372,9 +386,26 @@ export const NewsletterManagement = () => {
             </TabsList>
             
             <TabsContent value="subscribers" className="mt-4">
-              {subscribers.length === 0 ? (
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="status-filter" className="text-sm text-muted-foreground whitespace-nowrap">
+                    Filtrar por:
+                  </Label>
+                  <Select value={statusFilter} onValueChange={(value: 'all' | 'confirmed' | 'pending') => setStatusFilter(value)}>
+                    <SelectTrigger id="status-filter" className="w-[180px]">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos ({subscribers.length})</SelectItem>
+                      <SelectItem value="confirmed">Confirmados ({activeSubscribers})</SelectItem>
+                      <SelectItem value="pending">Pendentes ({pendingSubscribers})</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {filteredSubscribers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
-                  Nenhum assinante ainda.
+                  {subscribers.length === 0 ? 'Nenhum assinante ainda.' : 'Nenhum assinante encontrado com este filtro.'}
                 </p>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
@@ -390,7 +421,7 @@ export const NewsletterManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {subscribers.map((subscriber) => (
+                      {filteredSubscribers.map((subscriber) => (
                         <TableRow key={subscriber.id}>
                           <TableCell className="font-medium">
                             {subscriber.email}
