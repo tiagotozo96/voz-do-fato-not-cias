@@ -6,6 +6,7 @@ import { YoutubeExtension } from '@/extensions/YoutubeExtension';
 import { VimeoExtension } from '@/extensions/VimeoExtension';
 import { TwitterExtension } from '@/extensions/TwitterExtension';
 import { InstagramExtension } from '@/extensions/InstagramExtension';
+import { TikTokExtension } from '@/extensions/TikTokExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,8 @@ import {
   Youtube as YoutubeIcon,
   Video,
   Twitter,
-  Instagram
+  Instagram,
+  Music
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,6 +78,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       }),
       TwitterExtension,
       InstagramExtension,
+      TikTokExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -216,6 +219,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       const success = editor.chain().focus().setInstagramEmbed({ src: url }).run();
       if (!success) {
         toast.error('URL do Instagram inválida. Use o formato: instagram.com/p/ABC123 ou instagram.com/reel/ABC123');
+      }
+    }
+  };
+
+  const addTikTokEmbed = () => {
+    const url = window.prompt('URL do vídeo do TikTok:');
+    if (url) {
+      const success = editor.chain().focus().setTikTokEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do TikTok inválida. Use o formato: tiktok.com/@user/video/123');
       }
     }
   };
@@ -388,6 +401,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Adicionar post do Instagram"
         >
           <Instagram className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addTikTokEmbed}
+          title="Adicionar vídeo do TikTok"
+        >
+          <Music className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
