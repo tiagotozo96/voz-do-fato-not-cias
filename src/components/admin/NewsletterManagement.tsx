@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -63,6 +63,7 @@ export const NewsletterManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -235,9 +236,15 @@ export const NewsletterManagement = () => {
   const pendingSubscribers = subscribers.filter(s => !s.is_confirmed).length;
 
   const filteredSubscribers = subscribers.filter(s => {
-    if (statusFilter === 'confirmed') return s.is_confirmed;
-    if (statusFilter === 'pending') return !s.is_confirmed;
-    return true;
+    const matchesStatus = statusFilter === 'all' 
+      || (statusFilter === 'confirmed' && s.is_confirmed) 
+      || (statusFilter === 'pending' && !s.is_confirmed);
+    
+    const matchesSearch = searchQuery === '' 
+      || s.email.toLowerCase().includes(searchQuery.toLowerCase())
+      || (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return matchesStatus && matchesSearch;
   });
 
   const totalPages = Math.ceil(filteredSubscribers.length / itemsPerPage);
@@ -246,9 +253,14 @@ export const NewsletterManagement = () => {
     currentPage * itemsPerPage
   );
 
-  // Reset page when filter changes
+  // Reset page when filter or search changes
   const handleFilterChange = (value: 'all' | 'confirmed' | 'pending') => {
     setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
     setCurrentPage(1);
   };
 
@@ -400,7 +412,16 @@ export const NewsletterManagement = () => {
             </TabsList>
             
             <TabsContent value="subscribers" className="mt-4">
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                <div className="relative flex-1 w-full sm:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por e-mail ou nome..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="status-filter" className="text-sm text-muted-foreground whitespace-nowrap">
                     Filtrar por:
