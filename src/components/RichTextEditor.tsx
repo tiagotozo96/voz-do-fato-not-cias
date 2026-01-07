@@ -18,6 +18,7 @@ import { InstagramPreviewDialog } from '@/components/InstagramPreviewDialog';
 import { YoutubePreviewDialog } from '@/components/YoutubePreviewDialog';
 import { TwitterPreviewDialog } from '@/components/TwitterPreviewDialog';
 import { TikTokPreviewDialog } from '@/components/TikTokPreviewDialog';
+import { SpotifyPreviewDialog } from '@/components/SpotifyPreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -74,6 +75,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const [showYoutubeDialog, setShowYoutubeDialog] = useState(false);
   const [showTwitterDialog, setShowTwitterDialog] = useState(false);
   const [showTikTokDialog, setShowTikTokDialog] = useState(false);
+  const [showSpotifyDialog, setShowSpotifyDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -251,6 +253,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     return editor.chain().focus().setTikTokEmbed({ src: url }).run();
   }, [editor]);
 
+  const openSpotifyDialog = useCallback(() => {
+    setShowSpotifyDialog(true);
+  }, []);
+
+  const handleSpotifyInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setSpotifyEmbed({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -276,19 +287,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       const success = editor.chain().focus().setVimeoVideo({ src: url }).run();
       if (!success) {
         toast.error('URL do Vimeo inválida. Use o formato: vimeo.com/123456789');
-      }
-    }
-  };
-
-
-
-
-  const addSpotifyEmbed = () => {
-    const url = window.prompt('URL do Spotify (música, álbum, playlist, artista ou podcast):');
-    if (url) {
-      const success = editor.chain().focus().setSpotifyEmbed({ src: url }).run();
-      if (!success) {
-        toast.error('URL do Spotify inválida. Use o formato: open.spotify.com/track/... ou /album/... ou /playlist/...');
       }
     }
   };
@@ -327,7 +325,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: Instagram, label: 'Instagram', onClick: openInstagramDialog },
     { icon: Facebook, label: 'Facebook', onClick: openFacebookDialog },
     { icon: Music, label: 'TikTok', onClick: openTikTokDialog },
-    { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
+    { icon: Disc3, label: 'Spotify', onClick: openSpotifyDialog },
     { icon: MapPin, label: 'Google Maps', onClick: openGoogleMapsDialog },
   ];
 
@@ -556,6 +554,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         open={showTikTokDialog}
         onOpenChange={setShowTikTokDialog}
         onInsert={handleTikTokInsert}
+      />
+
+      {/* Spotify Preview Dialog */}
+      <SpotifyPreviewDialog
+        open={showSpotifyDialog}
+        onOpenChange={setShowSpotifyDialog}
+        onInsert={handleSpotifyInsert}
       />
     </div>
   );
