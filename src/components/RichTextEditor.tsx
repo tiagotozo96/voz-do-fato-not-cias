@@ -3,6 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { YoutubeExtension } from '@/extensions/YoutubeExtension';
+import { VimeoExtension } from '@/extensions/VimeoExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,8 @@ import {
   Minus,
   Upload,
   Loader2,
-  Youtube as YoutubeIcon
+  Youtube as YoutubeIcon,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,6 +65,10 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         width: 640,
         height: 360,
         nocookie: true,
+      }),
+      VimeoExtension.configure({
+        width: 640,
+        height: 360,
       }),
       Placeholder.configure({
         placeholder,
@@ -175,6 +181,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     const url = window.prompt('URL do vídeo do YouTube:');
     if (url) {
       editor.chain().focus().setYoutubeVideo({ src: url }).run();
+    }
+  };
+
+  const addVimeoVideo = () => {
+    const url = window.prompt('URL do vídeo do Vimeo:');
+    if (url) {
+      const success = editor.chain().focus().setVimeoVideo({ src: url }).run();
+      if (!success) {
+        toast.error('URL do Vimeo inválida. Use o formato: vimeo.com/123456789');
+      }
     }
   };
 
@@ -328,6 +344,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Adicionar vídeo do YouTube"
         >
           <YoutubeIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addVimeoVideo}
+          title="Adicionar vídeo do Vimeo"
+        >
+          <Video className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
