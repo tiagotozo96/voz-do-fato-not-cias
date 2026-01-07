@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -65,6 +65,8 @@ export const NewsletterManagement = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<'email' | 'subscribed_at'>('subscribed_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
   
   // Form state
@@ -247,8 +249,18 @@ export const NewsletterManagement = () => {
     return matchesStatus && matchesSearch;
   });
 
-  const totalPages = Math.ceil(filteredSubscribers.length / itemsPerPage);
-  const paginatedSubscribers = filteredSubscribers.slice(
+  const sortedSubscribers = [...filteredSubscribers].sort((a, b) => {
+    if (sortField === 'email') {
+      const comparison = a.email.localeCompare(b.email);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    } else {
+      const comparison = new Date(a.subscribed_at).getTime() - new Date(b.subscribed_at).getTime();
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }
+  });
+
+  const totalPages = Math.ceil(sortedSubscribers.length / itemsPerPage);
+  const paginatedSubscribers = sortedSubscribers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -262,6 +274,23 @@ export const NewsletterManagement = () => {
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setCurrentPage(1);
+  };
+
+  const handleSort = (field: 'email' | 'subscribed_at') => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ field }: { field: 'email' | 'subscribed_at' }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1" />
+      : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
   if (isLoading) {
@@ -468,11 +497,27 @@ export const NewsletterManagement = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>E-mail</TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('email')}
+                            className="flex items-center hover:text-foreground transition-colors"
+                          >
+                            E-mail
+                            <SortIcon field="email" />
+                          </button>
+                        </TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Confirmado</TableHead>
-                        <TableHead>Inscrito em</TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('subscribed_at')}
+                            className="flex items-center hover:text-foreground transition-colors"
+                          >
+                            Inscrito em
+                            <SortIcon field="subscribed_at" />
+                          </button>
+                        </TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
