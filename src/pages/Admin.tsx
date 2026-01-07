@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle } from 'lucide-react';
+import { CommentsModeration } from '@/components/admin/CommentsModeration';
 import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -1245,6 +1246,11 @@ const Admin = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Comments Tab */}
+          <TabsContent value="comments">
+            <CommentsModeration />
           </TabsContent>
         </Tabs>
       </main>
