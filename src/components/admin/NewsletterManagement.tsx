@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -63,6 +63,8 @@ export const NewsletterManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Form state
   const [subject, setSubject] = useState('');
@@ -238,6 +240,18 @@ export const NewsletterManagement = () => {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredSubscribers.length / itemsPerPage);
+  const paginatedSubscribers = filteredSubscribers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when filter changes
+  const handleFilterChange = (value: 'all' | 'confirmed' | 'pending') => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -391,7 +405,7 @@ export const NewsletterManagement = () => {
                   <Label htmlFor="status-filter" className="text-sm text-muted-foreground whitespace-nowrap">
                     Filtrar por:
                   </Label>
-                  <Select value={statusFilter} onValueChange={(value: 'all' | 'confirmed' | 'pending') => setStatusFilter(value)}>
+                  <Select value={statusFilter} onValueChange={handleFilterChange}>
                     <SelectTrigger id="status-filter" className="w-[180px]">
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
@@ -421,7 +435,7 @@ export const NewsletterManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSubscribers.map((subscriber) => (
+                      {paginatedSubscribers.map((subscriber) => (
                         <TableRow key={subscriber.id}>
                           <TableCell className="font-medium">
                             {subscriber.email}
@@ -509,6 +523,36 @@ export const NewsletterManagement = () => {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+              {filteredSubscribers.length > itemsPerPage && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filteredSubscribers.length)} de {filteredSubscribers.length} assinantes
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </TabsContent>
