@@ -184,6 +184,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
+  const openGoogleMapsDialog = useCallback(() => {
+    setShowMapsDialog(true);
+  }, []);
+
+  const handleGoogleMapsInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setGoogleMapsEmbed({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -258,15 +267,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       }
     }
   };
-
-  const openGoogleMapsDialog = useCallback(() => {
-    setShowMapsDialog(true);
-  }, []);
-
-  const handleGoogleMapsInsert = useCallback((url: string): boolean => {
-    if (!editor) return false;
-    return editor.chain().focus().setGoogleMapsEmbed({ src: url }).run();
-  }, [editor]);
 
   const ToolbarButton = ({ 
     onClick, 
