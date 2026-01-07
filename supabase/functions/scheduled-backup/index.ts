@@ -184,7 +184,57 @@ Deno.serve(async (req) => {
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
     console.error('Backup error:', errorMessage);
+
+    // Send failure notification email
+    const adminEmail = Deno.env.get('BACKUP_NOTIFICATION_EMAIL');
+    if (adminEmail && resend) {
+      try {
+        console.log('Sending backup failure notification email to:', adminEmail);
+        await resend.emails.send({
+          from: 'Backup System <onboarding@resend.dev>',
+          to: [adminEmail],
+          subject: `❌ Falha no Backup Automático`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #ef4444;">❌ Falha no Backup Automático</h1>
+              <p>O backup automático falhou. Por favor, verifique o sistema.</p>
+              
+              <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+                <h3 style="margin-top: 0; color: #dc2626;">🔴 Detalhes do Erro</h3>
+                <p><strong>Mensagem:</strong></p>
+                <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">${errorMessage}</pre>
+                ${errorStack ? `
+                <p><strong>Stack Trace:</strong></p>
+                <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 11px; max-height: 200px; overflow-y: auto;">${errorStack}</pre>
+                ` : ''}
+              </div>
+              
+              <p><strong>Data/Hora:</strong> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+              
+              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>⚠️ Ação Recomendada:</strong></p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                  <li>Verifique os logs da edge function</li>
+                  <li>Confirme que o bucket de backups existe</li>
+                  <li>Verifique as permissões do service role</li>
+                  <li>Execute um backup manual para testar</li>
+                </ul>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                Este é um email automático do sistema de backup.
+              </p>
+            </div>
+          `,
+        });
+        console.log('Backup failure notification email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending backup failure notification email:', emailError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
