@@ -2,7 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import Youtube from '@tiptap/extension-youtube';
+import { YoutubeExtension } from '@/extensions/YoutubeExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -59,13 +59,10 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           class: 'max-w-full rounded-lg',
         },
       }),
-      Youtube.configure({
+      YoutubeExtension.configure({
         width: 640,
         height: 360,
         nocookie: true,
-        HTMLAttributes: {
-          class: 'rounded-lg my-4',
-        },
       }),
       Placeholder.configure({
         placeholder,
