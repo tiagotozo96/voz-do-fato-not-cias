@@ -7,6 +7,7 @@ import { VimeoExtension } from '@/extensions/VimeoExtension';
 import { TwitterExtension } from '@/extensions/TwitterExtension';
 import { InstagramExtension } from '@/extensions/InstagramExtension';
 import { TikTokExtension } from '@/extensions/TikTokExtension';
+import { SpotifyExtension } from '@/extensions/SpotifyExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,8 @@ import {
   Video,
   Twitter,
   Instagram,
-  Music
+  Music,
+  Disc3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,6 +81,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       TwitterExtension,
       InstagramExtension,
       TikTokExtension,
+      SpotifyExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -229,6 +232,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       const success = editor.chain().focus().setTikTokEmbed({ src: url }).run();
       if (!success) {
         toast.error('URL do TikTok inválida. Use o formato: tiktok.com/@user/video/123');
+      }
+    }
+  };
+
+  const addSpotifyEmbed = () => {
+    const url = window.prompt('URL do Spotify (música, álbum, playlist, artista ou podcast):');
+    if (url) {
+      const success = editor.chain().focus().setSpotifyEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do Spotify inválida. Use o formato: open.spotify.com/track/... ou /album/... ou /playlist/...');
       }
     }
   };
@@ -407,6 +420,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Adicionar vídeo do TikTok"
         >
           <Music className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addSpotifyEmbed}
+          title="Adicionar música/podcast do Spotify"
+        >
+          <Disc3 className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
