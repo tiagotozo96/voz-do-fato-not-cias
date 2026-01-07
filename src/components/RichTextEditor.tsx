@@ -17,6 +17,7 @@ import { FacebookPreviewDialog } from '@/components/FacebookPreviewDialog';
 import { InstagramPreviewDialog } from '@/components/InstagramPreviewDialog';
 import { YoutubePreviewDialog } from '@/components/YoutubePreviewDialog';
 import { TwitterPreviewDialog } from '@/components/TwitterPreviewDialog';
+import { TikTokPreviewDialog } from '@/components/TikTokPreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -72,6 +73,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const [showInstagramDialog, setShowInstagramDialog] = useState(false);
   const [showYoutubeDialog, setShowYoutubeDialog] = useState(false);
   const [showTwitterDialog, setShowTwitterDialog] = useState(false);
+  const [showTikTokDialog, setShowTikTokDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -240,6 +242,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     return editor.chain().focus().setTwitterEmbed({ src: url }).run();
   }, [editor]);
 
+  const openTikTokDialog = useCallback(() => {
+    setShowTikTokDialog(true);
+  }, []);
+
+  const handleTikTokInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setTikTokEmbed({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -271,15 +282,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
 
 
 
-  const addTikTokEmbed = () => {
-    const url = window.prompt('URL do vídeo do TikTok:');
-    if (url) {
-      const success = editor.chain().focus().setTikTokEmbed({ src: url }).run();
-      if (!success) {
-        toast.error('URL do TikTok inválida. Use o formato: tiktok.com/@user/video/123');
-      }
-    }
-  };
 
   const addSpotifyEmbed = () => {
     const url = window.prompt('URL do Spotify (música, álbum, playlist, artista ou podcast):');
@@ -324,7 +326,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: Twitter, label: 'Twitter/X', onClick: openTwitterDialog },
     { icon: Instagram, label: 'Instagram', onClick: openInstagramDialog },
     { icon: Facebook, label: 'Facebook', onClick: openFacebookDialog },
-    { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
+    { icon: Music, label: 'TikTok', onClick: openTikTokDialog },
     { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
     { icon: MapPin, label: 'Google Maps', onClick: openGoogleMapsDialog },
   ];
@@ -547,6 +549,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         open={showTwitterDialog}
         onOpenChange={setShowTwitterDialog}
         onInsert={handleTwitterInsert}
+      />
+
+      {/* TikTok Preview Dialog */}
+      <TikTokPreviewDialog
+        open={showTikTokDialog}
+        onOpenChange={setShowTikTokDialog}
+        onInsert={handleTikTokInsert}
       />
     </div>
   );
