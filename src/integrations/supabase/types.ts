@@ -345,6 +345,42 @@ export type Database = {
         }
         Relationships: []
       }
+      restoration_history: {
+        Row: {
+          backup_date: string | null
+          backup_filename: string | null
+          error_message: string | null
+          id: string
+          options: Json
+          restored_at: string
+          restored_by: string | null
+          results: Json
+          status: string
+        }
+        Insert: {
+          backup_date?: string | null
+          backup_filename?: string | null
+          error_message?: string | null
+          id?: string
+          options?: Json
+          restored_at?: string
+          restored_by?: string | null
+          results?: Json
+          status?: string
+        }
+        Update: {
+          backup_date?: string | null
+          backup_filename?: string | null
+          error_message?: string | null
+          id?: string
+          options?: Json
+          restored_at?: string
+          restored_by?: string | null
+          results?: Json
+          status?: string
+        }
+        Relationships: []
+      }
       tags: {
         Row: {
           created_at: string

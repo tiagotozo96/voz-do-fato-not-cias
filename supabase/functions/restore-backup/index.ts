@@ -11,6 +11,7 @@ interface BackupData {
   tags?: any[];
   news_tags?: any[];
   subscribers?: any[];
+  exportedAt?: string;
 }
 
 interface RestoreOptions {
@@ -33,11 +34,22 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { backup, options }: { backup: BackupData; options: RestoreOptions } = await req.json();
+    // Get user ID from auth header
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id || null;
+    }
+
+    const { backup, options, backupFilename }: { backup: BackupData; options: RestoreOptions; backupFilename?: string } = await req.json();
 
     if (!backup) {
       throw new Error('No backup data provided');
     }
+
+    const backupDate = backup.exportedAt ? new Date(backup.exportedAt) : null;
 
     const results = {
       categories: { restored: 0, skipped: 0 },
@@ -162,6 +174,22 @@ Deno.serve(async (req) => {
 
     console.log('Restoration completed!', results);
 
+    // Log restoration to history
+    const { error: historyError } = await supabase
+      .from('restoration_history')
+      .insert({
+        restored_by: userId,
+        backup_filename: backupFilename || null,
+        backup_date: backupDate,
+        options: options,
+        results: results,
+        status: 'success',
+      });
+
+    if (historyError) {
+      console.error('Error logging restoration history:', historyError);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -176,6 +204,21 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Restore error:', errorMessage);
+
+    // Log failed restoration to history
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      await supabase.from('restoration_history').insert({
+        status: 'failed',
+        error_message: errorMessage,
+      });
+    } catch (logError) {
+      console.error('Error logging failed restoration:', logError);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,

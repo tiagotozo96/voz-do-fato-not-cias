@@ -32,7 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Download, FileJson, FileSpreadsheet, Database, Tag, FolderOpen, Newspaper, Mail, Clock, Trash2, RefreshCw, Calendar, Upload, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Download, FileJson, FileSpreadsheet, Database, Tag, FolderOpen, Newspaper, Mail, Clock, Trash2, RefreshCw, Calendar, Upload, RotateCcw, AlertTriangle, History, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -40,6 +41,18 @@ interface BackupFile {
   name: string;
   created_at: string | null;
   metadata: Record<string, any> | null;
+}
+
+interface RestorationHistoryItem {
+  id: string;
+  restored_by: string | null;
+  restored_at: string;
+  backup_filename: string | null;
+  backup_date: string | null;
+  options: any;
+  results: any;
+  status: string;
+  error_message: string | null;
 }
 
 export const DataExport = () => {
@@ -60,6 +73,7 @@ export const DataExport = () => {
   const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [backupToRestore, setBackupToRestore] = useState<any>(null);
+  const [backupFilename, setBackupFilename] = useState<string | null>(null);
   const [restoreOptions, setRestoreOptions] = useState({
     restoreNews: true,
     restoreCategories: true,
@@ -69,9 +83,31 @@ export const DataExport = () => {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Restoration history state
+  const [restorationHistory, setRestorationHistory] = useState<RestorationHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
   useEffect(() => {
     fetchSavedBackups();
+    fetchRestorationHistory();
   }, []);
+
+  const fetchRestorationHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('restoration_history')
+        .select('*')
+        .order('restored_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setRestorationHistory(data || []);
+    } catch (error: any) {
+      console.error('Error fetching restoration history:', error);
+    }
+    setIsLoadingHistory(false);
+  };
 
   const fetchSavedBackups = async () => {
     setIsLoadingBackups(true);
@@ -393,6 +429,7 @@ export const DataExport = () => {
       const text = await data.text();
       const backup = JSON.parse(text);
       setBackupToRestore(backup);
+      setBackupFilename(filename);
       setIsRestoreDialogOpen(true);
     } catch (error: any) {
       toast({
@@ -421,6 +458,7 @@ export const DataExport = () => {
         body: {
           backup: backupToRestore,
           options: restoreOptions,
+          backupFilename: backupFilename,
         },
       });
 
@@ -437,16 +475,30 @@ export const DataExport = () => {
         title: 'Restauração concluída!',
         description: summary.length > 0 ? `Restaurados: ${summary.join(', ')}.` : 'Nenhum dado foi restaurado.',
       });
+
+      // Refresh history
+      fetchRestorationHistory();
     } catch (error: any) {
       toast({
         title: 'Erro ao restaurar',
         description: error.message,
         variant: 'destructive',
       });
+      fetchRestorationHistory();
     }
 
     setIsRestoring(false);
     setBackupToRestore(null);
+    setBackupFilename(null);
+  };
+
+  const getResultsSummary = (results: Record<string, any>) => {
+    const parts = [];
+    if (results.categories?.restored) parts.push(`${results.categories.restored} cat.`);
+    if (results.tags?.restored) parts.push(`${results.tags.restored} tags`);
+    if (results.news?.restored) parts.push(`${results.news.restored} not.`);
+    if (results.subscribers?.restored) parts.push(`${results.subscribers.restored} assin.`);
+    return parts.join(', ') || 'Nenhum';
   };
 
   return (
@@ -693,38 +745,132 @@ export const DataExport = () => {
         </CardContent>
       </Card>
 
-      {/* Restore from File Card */}
+      {/* Restore and History Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-green-600" />
-            Restaurar Backup
+            <RotateCcw className="h-5 w-5 text-green-600" />
+            Restauração de Backup
           </CardTitle>
           <CardDescription>
-            Restaure dados a partir de um arquivo de backup JSON
+            Restaure dados a partir de um arquivo de backup ou veja o histórico de restaurações
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isRestoring}
-            className="w-full"
-          >
-            {isRestoring ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4 mr-2" />
-            )}
-            {isRestoring ? 'Restaurando...' : 'Selecionar Arquivo de Backup'}
-          </Button>
+          <Tabs defaultValue="restore" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="restore" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Restaurar
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Histórico
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="restore" className="mt-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isRestoring}
+                className="w-full"
+              >
+                {isRestoring ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {isRestoring ? 'Restaurando...' : 'Selecionar Arquivo de Backup'}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : restorationHistory.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhuma restauração realizada ainda.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {restorationHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-lg border ${
+                        item.status === 'success' 
+                          ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                          : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {item.status === 'success' ? (
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                          )}
+                          <div>
+                            <p className="font-medium text-sm">
+                              {format(new Date(item.restored_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                            {item.backup_filename && (
+                              <p className="text-xs text-muted-foreground">{item.backup_filename}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant={item.status === 'success' ? 'default' : 'destructive'} className="text-xs">
+                          {item.status === 'success' ? 'Sucesso' : 'Falha'}
+                        </Badge>
+                      </div>
+                      
+                      {item.status === 'success' && item.results && (
+                        <p className="text-xs text-muted-foreground mt-2 ml-7">
+                          Restaurados: {getResultsSummary(item.results)}
+                        </p>
+                      )}
+                      
+                      {item.status === 'failed' && item.error_message && (
+                        <p className="text-xs text-red-600 mt-2 ml-7">
+                          Erro: {item.error_message}
+                        </p>
+                      )}
+
+                      {item.options && Object.keys(item.options).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2 ml-7">
+                          {item.options.restoreNews && <Badge variant="outline" className="text-xs">Notícias</Badge>}
+                          {item.options.restoreCategories && <Badge variant="outline" className="text-xs">Categorias</Badge>}
+                          {item.options.restoreTags && <Badge variant="outline" className="text-xs">Tags</Badge>}
+                          {item.options.restoreSubscribers && <Badge variant="outline" className="text-xs">Assinantes</Badge>}
+                          {item.options.clearExisting && <Badge variant="destructive" className="text-xs">Limpeza</Badge>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-4"
+                onClick={fetchRestorationHistory}
+                disabled={isLoadingHistory}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                Atualizar Histórico
+              </Button>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
