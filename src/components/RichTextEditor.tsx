@@ -16,6 +16,7 @@ import { GoogleMapsPreviewDialog } from '@/components/GoogleMapsPreviewDialog';
 import { FacebookPreviewDialog } from '@/components/FacebookPreviewDialog';
 import { InstagramPreviewDialog } from '@/components/InstagramPreviewDialog';
 import { YoutubePreviewDialog } from '@/components/YoutubePreviewDialog';
+import { TwitterPreviewDialog } from '@/components/TwitterPreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -70,6 +71,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const [showFacebookDialog, setShowFacebookDialog] = useState(false);
   const [showInstagramDialog, setShowInstagramDialog] = useState(false);
   const [showYoutubeDialog, setShowYoutubeDialog] = useState(false);
+  const [showTwitterDialog, setShowTwitterDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -229,6 +231,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     return editor.chain().focus().setYoutubeVideo({ src: url }).run();
   }, [editor]);
 
+  const openTwitterDialog = useCallback(() => {
+    setShowTwitterDialog(true);
+  }, []);
+
+  const handleTwitterInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setTwitterEmbed({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -258,15 +269,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
-  const addTwitterEmbed = () => {
-    const url = window.prompt('URL do tweet (Twitter/X):');
-    if (url) {
-      const success = editor.chain().focus().setTwitterEmbed({ src: url }).run();
-      if (!success) {
-        toast.error('URL do tweet inválida. Use o formato: twitter.com/user/status/123 ou x.com/user/status/123');
-      }
-    }
-  };
 
 
   const addTikTokEmbed = () => {
@@ -319,7 +321,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const mediaEmbeds = [
     { icon: YoutubeIcon, label: 'YouTube', onClick: openYoutubeDialog },
     { icon: Video, label: 'Vimeo', onClick: addVimeoVideo },
-    { icon: Twitter, label: 'Twitter/X', onClick: addTwitterEmbed },
+    { icon: Twitter, label: 'Twitter/X', onClick: openTwitterDialog },
     { icon: Instagram, label: 'Instagram', onClick: openInstagramDialog },
     { icon: Facebook, label: 'Facebook', onClick: openFacebookDialog },
     { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
@@ -538,6 +540,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         open={showYoutubeDialog}
         onOpenChange={setShowYoutubeDialog}
         onInsert={handleYoutubeInsert}
+      />
+
+      {/* Twitter Preview Dialog */}
+      <TwitterPreviewDialog
+        open={showTwitterDialog}
+        onOpenChange={setShowTwitterDialog}
+        onInsert={handleTwitterInsert}
       />
     </div>
   );
