@@ -359,7 +359,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       {/* Editor */}
       <EditorContent 
         editor={editor} 
-        className="prose prose-sm max-w-none p-3 min-h-[200px] focus:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
+        className="prose prose-sm max-w-none p-3 min-h-[200px] focus:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_div[data-youtube-video]]:my-4 [&_.ProseMirror_div[data-youtube-video]]:flex [&_.ProseMirror_div[data-youtube-video]]:justify-center [&_.ProseMirror_div[data-youtube-video]_iframe]:rounded-lg [&_.ProseMirror_div[data-youtube-video]_iframe]:max-w-full [&_.ProseMirror_div[data-youtube-video]_iframe]:aspect-video"
       />
     </div>
   );
