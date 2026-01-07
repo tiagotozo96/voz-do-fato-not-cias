@@ -14,6 +14,7 @@ import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GoogleMapsPreviewDialog } from '@/components/GoogleMapsPreviewDialog';
 import { FacebookPreviewDialog } from '@/components/FacebookPreviewDialog';
+import { InstagramPreviewDialog } from '@/components/InstagramPreviewDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -66,6 +67,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
   const [isDragging, setIsDragging] = useState(false);
   const [showMapsDialog, setShowMapsDialog] = useState(false);
   const [showFacebookDialog, setShowFacebookDialog] = useState(false);
+  const [showInstagramDialog, setShowInstagramDialog] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -207,6 +209,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     return editor.chain().focus().setFacebookEmbed({ src: url }).run();
   }, [editor]);
 
+  const openInstagramDialog = useCallback(() => {
+    setShowInstagramDialog(true);
+  }, []);
+
+  const handleInstagramInsert = useCallback((url: string): boolean => {
+    if (!editor) return false;
+    return editor.chain().focus().setInstagramEmbed({ src: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -252,15 +263,6 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
-  const addInstagramEmbed = () => {
-    const url = window.prompt('URL do post do Instagram:');
-    if (url) {
-      const success = editor.chain().focus().setInstagramEmbed({ src: url }).run();
-      if (!success) {
-        toast.error('URL do Instagram inválida. Use o formato: instagram.com/p/ABC123 ou instagram.com/reel/ABC123');
-      }
-    }
-  };
 
   const addTikTokEmbed = () => {
     const url = window.prompt('URL do vídeo do TikTok:');
@@ -313,7 +315,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: YoutubeIcon, label: 'YouTube', onClick: addYoutubeVideo },
     { icon: Video, label: 'Vimeo', onClick: addVimeoVideo },
     { icon: Twitter, label: 'Twitter/X', onClick: addTwitterEmbed },
-    { icon: Instagram, label: 'Instagram', onClick: addInstagramEmbed },
+    { icon: Instagram, label: 'Instagram', onClick: openInstagramDialog },
     { icon: Facebook, label: 'Facebook', onClick: openFacebookDialog },
     { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
     { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
@@ -517,6 +519,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         open={showFacebookDialog}
         onOpenChange={setShowFacebookDialog}
         onInsert={handleFacebookInsert}
+      />
+
+      {/* Instagram Preview Dialog */}
+      <InstagramPreviewDialog
+        open={showInstagramDialog}
+        onOpenChange={setShowInstagramDialog}
+        onInsert={handleInstagramInsert}
       />
     </div>
   );
