@@ -8,6 +8,7 @@ import { TwitterExtension } from '@/extensions/TwitterExtension';
 import { InstagramExtension } from '@/extensions/InstagramExtension';
 import { TikTokExtension } from '@/extensions/TikTokExtension';
 import { SpotifyExtension } from '@/extensions/SpotifyExtension';
+import { GoogleMapsExtension } from '@/extensions/GoogleMapsExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ import {
   Instagram,
   Music,
   Disc3,
+  MapPin,
   Play,
   ChevronDown
 } from 'lucide-react';
@@ -90,6 +92,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       InstagramExtension,
       TikTokExtension,
       SpotifyExtension,
+      GoogleMapsExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -254,6 +257,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
+  const addGoogleMapsEmbed = () => {
+    const url = window.prompt('URL do Google Maps (copie o link de compartilhamento ou embed):');
+    if (url) {
+      const success = editor.chain().focus().setGoogleMapsEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do Google Maps inválida. Use o link de compartilhamento ou o código de embed do Google Maps.');
+      }
+    }
+  };
+
   const ToolbarButton = ({ 
     onClick, 
     isActive = false, 
@@ -287,6 +300,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: Instagram, label: 'Instagram', onClick: addInstagramEmbed },
     { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
     { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
+    { icon: MapPin, label: 'Google Maps', onClick: addGoogleMapsEmbed },
   ];
 
   return (
