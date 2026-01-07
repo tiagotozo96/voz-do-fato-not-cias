@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   BarChart, 
@@ -12,14 +12,16 @@ import {
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
+  AreaChart,
   Area,
-  AreaChart
+  LineChart,
+  Line
 } from 'recharts';
-import { format, subDays, startOfDay, parseISO, isAfter } from 'date-fns';
+import { format, subDays, startOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, PieChartIcon, BarChart3, Calendar } from 'lucide-react';
+import { TrendingUp, PieChartIcon, BarChart3, Calendar, Eye, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface NewsItem {
   id: string;
@@ -41,6 +43,12 @@ interface Category {
   color: string | null;
 }
 
+interface ViewsHistory {
+  news_id: string;
+  view_date: string;
+  view_count: number;
+}
+
 interface DashboardChartsProps {
   news: NewsItem[];
   categories: Category[];
@@ -49,10 +57,63 @@ interface DashboardChartsProps {
 const COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
 export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
-  // Publications per day (last 7 days)
-  const publicationsPerDay = useMemo(() => {
+  const [viewsHistory, setViewsHistory] = useState<ViewsHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [period, setPeriod] = useState<'7d' | '30d'>('7d');
+
+  useEffect(() => {
+    fetchViewsHistory();
+  }, [period]);
+
+  const fetchViewsHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const daysAgo = period === '7d' ? 7 : 30;
+      const startDate = format(subDays(new Date(), daysAgo), 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('news_views_history')
+        .select('news_id, view_date, view_count')
+        .gte('view_date', startDate)
+        .order('view_date', { ascending: true });
+
+      if (error) throw error;
+      setViewsHistory(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Views per day from history
+  const viewsPerDay = useMemo(() => {
+    const daysCount = period === '7d' ? 7 : 30;
     const days = [];
-    for (let i = 6; i >= 0; i--) {
+    
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const date = startOfDay(subDays(new Date(), i));
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      const dayViews = viewsHistory
+        .filter(v => v.view_date === dateStr)
+        .reduce((sum, v) => sum + v.view_count, 0);
+      
+      days.push({
+        date: format(date, period === '7d' ? 'EEE' : 'dd/MM', { locale: ptBR }),
+        fullDate: format(date, 'dd/MM/yyyy', { locale: ptBR }),
+        visualizações: dayViews
+      });
+    }
+    return days;
+  }, [viewsHistory, period]);
+
+  // Publications per day
+  const publicationsPerDay = useMemo(() => {
+    const daysCount = period === '7d' ? 7 : 30;
+    const days = [];
+    
+    for (let i = daysCount - 1; i >= 0; i--) {
       const date = startOfDay(subDays(new Date(), i));
       const nextDate = startOfDay(subDays(new Date(), i - 1));
       
@@ -63,13 +124,13 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
       }).length;
       
       days.push({
-        date: format(date, 'EEE', { locale: ptBR }),
+        date: format(date, period === '7d' ? 'EEE' : 'dd/MM', { locale: ptBR }),
         fullDate: format(date, 'dd/MM', { locale: ptBR }),
         publicações: count
       });
     }
     return days;
-  }, [news]);
+  }, [news, period]);
 
   // Views by category
   const viewsByCategory = useMemo(() => {
@@ -107,36 +168,10 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
       }));
   }, [news]);
 
-  // Publications per week (last 4 weeks)
-  const publicationsPerWeek = useMemo(() => {
-    const weeks = [];
-    for (let i = 3; i >= 0; i--) {
-      const weekStart = startOfDay(subDays(new Date(), (i + 1) * 7));
-      const weekEnd = startOfDay(subDays(new Date(), i * 7));
-      
-      const count = news.filter(n => {
-        if (!n.published_at) return false;
-        const pubDate = parseISO(n.published_at);
-        return pubDate >= weekStart && pubDate < weekEnd;
-      }).length;
-      
-      const totalViews = news
-        .filter(n => {
-          if (!n.published_at) return false;
-          const pubDate = parseISO(n.published_at);
-          return pubDate >= weekStart && pubDate < weekEnd;
-        })
-        .reduce((sum, n) => sum + (n.views || 0), 0);
-      
-      weeks.push({
-        week: `Sem ${4 - i}`,
-        period: `${format(weekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`,
-        publicações: count,
-        views: totalViews
-      });
-    }
-    return weeks;
-  }, [news]);
+  // Total views in period
+  const totalViewsInPeriod = useMemo(() => {
+    return viewsHistory.reduce((sum, v) => sum + v.view_count, 0);
+  }, [viewsHistory]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -184,92 +219,156 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
 
   return (
     <div className="space-y-6">
-      {/* First row - Publications charts */}
+      {/* Period Selector */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          Analytics
+        </h3>
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as '7d' | '30d')}>
+          <TabsList>
+            <TabsTrigger value="7d">7 dias</TabsTrigger>
+            <TabsTrigger value="30d">30 dias</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Views Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Eye className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Views no Período</p>
+                <p className="text-2xl font-bold text-primary">
+                  {isLoadingHistory ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    totalViewsInPeriod.toLocaleString('pt-BR')
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Média Diária</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {isLoadingHistory ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    Math.round(totalViewsInPeriod / (period === '7d' ? 7 : 30)).toLocaleString('pt-BR')
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Publicações</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {publicationsPerDay.reduce((sum, d) => sum + d.publicações, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* First row - Time-based charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Views per day */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Eye className="h-4 w-4 text-primary" />
+              Visualizações por Dia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              {isLoadingHistory ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={viewsPerDay}>
+                    <defs>
+                      <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      interval={period === '30d' ? 4 : 0}
+                    />
+                    <YAxis 
+                      allowDecimals={false}
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="visualizações" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      fill="url(#colorViews)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Publications per day */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Calendar className="h-4 w-4 text-primary" />
-              Publicações por Dia (Últimos 7 dias)
+              Publicações por Dia
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={publicationsPerDay}>
-                  <defs>
-                    <linearGradient id="colorPub" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+                <BarChart data={publicationsPerDay}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     dataKey="date" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 11 }}
                     className="text-muted-foreground"
+                    interval={period === '30d' ? 4 : 0}
                   />
                   <YAxis 
                     allowDecimals={false}
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 11 }}
                     className="text-muted-foreground"
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="publicações" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                    fill="url(#colorPub)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Publications per week */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Publicações por Semana (Últimas 4 semanas)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={publicationsPerWeek}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="week" 
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                  />
-                  <YAxis 
-                    allowDecimals={false}
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                  />
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-background border border-border rounded-lg shadow-lg p-3">
-                            <p className="font-medium text-foreground">{payload[0]?.payload?.period}</p>
-                            <p className="text-sm text-primary">
-                              {payload[0]?.value} publicações
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {payload[0]?.payload?.views?.toLocaleString('pt-BR')} views
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
                   <Bar 
                     dataKey="publicações" 
                     fill="hsl(var(--primary))" 
@@ -282,7 +381,7 @@ export const DashboardCharts = ({ news, categories }: DashboardChartsProps) => {
         </Card>
       </div>
 
-      {/* Second row - Views charts */}
+      {/* Second row - Category and top news charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Views by category - Pie Chart */}
         <Card>
