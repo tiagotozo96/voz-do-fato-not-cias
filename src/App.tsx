@@ -17,6 +17,7 @@ import Multimidia from "./pages/Multimidia";
 import Contato from "./pages/Contato";
 import Busca from "./pages/Busca";
 import Tag from "./pages/Tag";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/contato" element={<Contato />} />
             <Route path="/busca" element={<Busca />} />
             <Route path="/tag/:slug" element={<Tag />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

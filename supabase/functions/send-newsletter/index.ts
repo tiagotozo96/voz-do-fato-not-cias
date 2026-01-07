@@ -104,6 +104,9 @@ serve(async (req: Request): Promise<Response> => {
     let sentCount = 0;
     let errors: string[] = [];
 
+    // Get the site URL for unsubscribe links
+    const siteUrl = Deno.env.get("SITE_URL") || "https://vozdofato.lovable.app";
+
     // Send emails in batches to avoid rate limits
     for (const subscriber of subscribers) {
       try {
@@ -111,6 +114,10 @@ serve(async (req: Request): Promise<Response> => {
           "{{name}}",
           subscriber.name || "Leitor"
         );
+
+        // Create unsubscribe token (base64 encoded email)
+        const unsubscribeToken = btoa(subscriber.email);
+        const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
 
         await resend.emails.send({
           from: "Newsletter <onboarding@resend.dev>",
@@ -128,15 +135,24 @@ serve(async (req: Request): Promise<Response> => {
                 <h1 style="color: white; margin: 0; font-size: 28px;">Voz do Fato</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">Newsletter</p>
               </div>
-              <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e5e5; border-top: none; border-radius: 0 0 8px 8px;">
+              <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e5e5; border-top: none;">
                 <h2 style="color: #dc2626; margin-top: 0;">${subject}</h2>
                 <div style="color: #444;">
                   ${personalizedContent}
                 </div>
               </div>
-              <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-                <p>Você está recebendo este email porque se inscreveu em nossa newsletter.</p>
-                <p>© ${new Date().getFullYear()} Voz do Fato. Todos os direitos reservados.</p>
+              <div style="background: #f9f9f9; padding: 20px; text-align: center; border: 1px solid #e5e5e5; border-top: none; border-radius: 0 0 8px 8px;">
+                <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">
+                  Você está recebendo este email porque se inscreveu em nossa newsletter.
+                </p>
+                <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">
+                  © ${new Date().getFullYear()} Voz do Fato. Todos os direitos reservados.
+                </p>
+                <p style="margin: 15px 0 0 0;">
+                  <a href="${unsubscribeUrl}" style="color: #999; font-size: 11px; text-decoration: underline;">
+                    Cancelar inscrição na newsletter
+                  </a>
+                </p>
               </div>
             </body>
             </html>
