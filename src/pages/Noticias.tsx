@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, ChevronRight, Filter, ArrowUpDown, Clock, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NewsItem {
   id: string;
@@ -15,6 +17,7 @@ interface NewsItem {
   published_at: string | null;
   slug: string;
   views: number | null;
+  category_id: string | null;
   category: {
     name: string;
     slug: string;
@@ -33,6 +36,7 @@ interface Category {
 const ITEMS_PER_PAGE = 9;
 
 const Noticias = () => {
+  const { toast } = useToast();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -57,7 +61,7 @@ const Noticias = () => {
     }
   };
 
-  const fetchNews = async (page: number, categoryId: string | null = null, sort: SortOption = "date_desc") => {
+  const fetchNews = useCallback(async (page: number, categoryId: string | null = null, sort: SortOption = "date_desc") => {
     setIsLoading(true);
     const from = (page - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
@@ -87,6 +91,7 @@ const Noticias = () => {
           published_at,
           slug,
           views,
+          category_id,
           category:categories(name, slug)
         `)
         .eq("is_published", true)
@@ -117,12 +122,112 @@ const Noticias = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCategories();
     fetchNews(1, null, sortOption);
   }, []);
+
+  // Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('noticias-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'news',
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newRecord = payload.new as any;
+            
+            // Check if it matches current filter
+            const matchesCategory = !selectedCategory || newRecord.category_id === selectedCategory;
+            
+            if (newRecord.is_published && matchesCategory) {
+              const { data } = await supabase
+                .from('news')
+                .select(`
+                  id, title, excerpt, image_url, published_at, slug, views, category_id,
+                  category:categories(name, slug)
+                `)
+                .eq('id', newRecord.id)
+                .single();
+
+              if (data) {
+                setNews((prev) => {
+                  // Add to beginning if sorting by date desc
+                  if (sortOption === 'date_desc') {
+                    return [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)];
+                  }
+                  // For other sorts, just add and let user refresh for proper order
+                  return [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)];
+                });
+                setTotalCount((c) => c + 1);
+                toast({
+                  title: '📰 Nova notícia!',
+                  description: data.title,
+                });
+              }
+            }
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            const updatedRecord = payload.new as any;
+            const matchesCategory = !selectedCategory || updatedRecord.category_id === selectedCategory;
+            
+            if (updatedRecord.is_published && matchesCategory) {
+              const { data } = await supabase
+                .from('news')
+                .select(`
+                  id, title, excerpt, image_url, published_at, slug, views, category_id,
+                  category:categories(name, slug)
+                `)
+                .eq('id', updatedRecord.id)
+                .single();
+
+              if (data) {
+                setNews((prev) => {
+                  const exists = prev.some((item) => item.id === data.id);
+                  if (exists) {
+                    return prev.map((item) => (item.id === data.id ? data : item));
+                  }
+                  return [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)];
+                });
+              }
+            } else {
+              // Remove if unpublished or category changed
+              setNews((prev) => {
+                const hadItem = prev.some((item) => item.id === updatedRecord.id);
+                if (hadItem) {
+                  setTotalCount((c) => Math.max(0, c - 1));
+                }
+                return prev.filter((item) => item.id !== updatedRecord.id);
+              });
+            }
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const deletedRecord = payload.old as any;
+            setNews((prev) => {
+              const hadItem = prev.some((item) => item.id === deletedRecord.id);
+              if (hadItem) {
+                setTotalCount((c) => Math.max(0, c - 1));
+              }
+              return prev.filter((item) => item.id !== deletedRecord.id);
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedCategory, sortOption, toast]);
 
   const handleCategoryChange = (categoryId: string | null) => {
     setSelectedCategory(categoryId);
@@ -211,6 +316,10 @@ const Noticias = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="Todas as Notícias - Portal de Notícias"
+        description="Acompanhe as últimas notícias do Brasil e do mundo"
+      />
       <Header />
 
       <main className="flex-1">
