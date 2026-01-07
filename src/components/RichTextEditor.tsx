@@ -5,6 +5,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { YoutubeExtension } from '@/extensions/YoutubeExtension';
 import { VimeoExtension } from '@/extensions/VimeoExtension';
 import { TwitterExtension } from '@/extensions/TwitterExtension';
+import { InstagramExtension } from '@/extensions/InstagramExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,8 @@ import {
   Loader2,
   Youtube as YoutubeIcon,
   Video,
-  Twitter
+  Twitter,
+  Instagram
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +75,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         height: 360,
       }),
       TwitterExtension,
+      InstagramExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -203,6 +206,16 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       const success = editor.chain().focus().setTwitterEmbed({ src: url }).run();
       if (!success) {
         toast.error('URL do tweet inválida. Use o formato: twitter.com/user/status/123 ou x.com/user/status/123');
+      }
+    }
+  };
+
+  const addInstagramEmbed = () => {
+    const url = window.prompt('URL do post do Instagram:');
+    if (url) {
+      const success = editor.chain().focus().setInstagramEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do Instagram inválida. Use o formato: instagram.com/p/ABC123 ou instagram.com/reel/ABC123');
       }
     }
   };
@@ -369,6 +382,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Adicionar tweet (Twitter/X)"
         >
           <Twitter className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addInstagramEmbed}
+          title="Adicionar post do Instagram"
+        >
+          <Instagram className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
