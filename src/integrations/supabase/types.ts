@@ -184,6 +184,41 @@ export type Database = {
           },
         ]
       }
+      news_views_history: {
+        Row: {
+          created_at: string
+          id: string
+          news_id: string
+          updated_at: string
+          view_count: number
+          view_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          news_id: string
+          updated_at?: string
+          view_count?: number
+          view_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          news_id?: string
+          updated_at?: string
+          view_count?: number
+          view_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_views_history_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
