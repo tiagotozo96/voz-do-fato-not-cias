@@ -11,6 +11,12 @@ import { SpotifyExtension } from '@/extensions/SpotifyExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Bold, 
   Italic, 
@@ -33,7 +39,9 @@ import {
   Twitter,
   Instagram,
   Music,
-  Disc3
+  Disc3,
+  Play,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -272,6 +280,15 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     </Button>
   );
 
+  const mediaEmbeds = [
+    { icon: YoutubeIcon, label: 'YouTube', onClick: addYoutubeVideo },
+    { icon: Video, label: 'Vimeo', onClick: addVimeoVideo },
+    { icon: Twitter, label: 'Twitter/X', onClick: addTwitterEmbed },
+    { icon: Instagram, label: 'Instagram', onClick: addInstagramEmbed },
+    { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
+    { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
+  ];
+
   return (
     <div 
       ref={editorContainerRef}
@@ -293,7 +310,8 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         </div>
       )}
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-0.5 p-1 border-b border-input bg-muted/30">
+      <div className="flex flex-wrap items-center gap-0.5 p-1 border-b border-input bg-muted/30">
+        {/* Headings */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           isActive={editor.isActive('heading', { level: 1 })}
@@ -318,6 +336,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         
         <div className="w-px h-8 bg-border mx-1" />
         
+        {/* Text formatting */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
@@ -342,6 +361,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         
         <div className="w-px h-8 bg-border mx-1" />
         
+        {/* Lists and blocks */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
@@ -372,6 +392,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         
         <div className="w-px h-8 bg-border mx-1" />
         
+        {/* Link */}
         <ToolbarButton
           onClick={addLink}
           isActive={editor.isActive('link')}
@@ -379,6 +400,8 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         >
           <LinkIcon className="h-4 w-4" />
         </ToolbarButton>
+        
+        {/* Images */}
         <ToolbarButton
           onClick={addImage}
           title="Adicionar imagem por URL"
@@ -391,42 +414,35 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         >
           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
         </ToolbarButton>
-        <ToolbarButton
-          onClick={addYoutubeVideo}
-          title="Adicionar vídeo do YouTube"
-        >
-          <YoutubeIcon className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={addVimeoVideo}
-          title="Adicionar vídeo do Vimeo"
-        >
-          <Video className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={addTwitterEmbed}
-          title="Adicionar tweet (Twitter/X)"
-        >
-          <Twitter className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={addInstagramEmbed}
-          title="Adicionar post do Instagram"
-        >
-          <Instagram className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={addTikTokEmbed}
-          title="Adicionar vídeo do TikTok"
-        >
-          <Music className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={addSpotifyEmbed}
-          title="Adicionar música/podcast do Spotify"
-        >
-          <Disc3 className="h-4 w-4" />
-        </ToolbarButton>
+        
+        {/* Media Embeds Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 gap-1"
+              title="Inserir mídia"
+            >
+              <Play className="h-4 w-4" />
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48 bg-background z-50">
+            {mediaEmbeds.map((embed) => (
+              <DropdownMenuItem
+                key={embed.label}
+                onClick={embed.onClick}
+                className="gap-2 cursor-pointer"
+              >
+                <embed.icon className="h-4 w-4" />
+                <span>{embed.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
         <input
           ref={fileInputRef}
           type="file"
@@ -437,6 +453,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
         
         <div className="w-px h-8 bg-border mx-1" />
         
+        {/* Undo/Redo */}
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
           title="Desfazer"
