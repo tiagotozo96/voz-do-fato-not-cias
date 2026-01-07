@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3 } from 'lucide-react';
+import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -61,6 +61,7 @@ interface News {
   category_id: string;
   is_featured: boolean;
   is_published: boolean;
+  views: number | null;
   published_at: string;
   created_at: string;
   scheduled_at: string | null;
@@ -519,8 +520,15 @@ const Admin = () => {
     );
   }
 
+  // Calculate stats
+  const publishedNews = news.filter(n => n.is_published);
+  const totalViews = news.reduce((acc, n) => acc + (n.views || 0), 0);
+  const todayViews = news
+    .filter(n => n.published_at && isToday(new Date(n.published_at)))
+    .reduce((acc, n) => acc + (n.views || 0), 0);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-4 px-6">
         <div className="container mx-auto flex items-center justify-between">
@@ -542,65 +550,144 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto py-8 px-4">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total de Notícias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{news.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Publicadas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">{news.filter(n => n.is_published).length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Rascunhos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-yellow-600">{news.filter(n => !n.is_published).length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Categorias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{categories.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Tags</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{tags.length}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="news" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="news" className="flex items-center gap-2">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="bg-white border shadow-sm p-1 h-auto">
+            <TabsTrigger 
+              value="dashboard" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger 
+              value="news" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               <Newspaper className="h-4 w-4" />
               Notícias
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="categories" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               <FolderOpen className="h-4 w-4" />
               Categorias
             </TabsTrigger>
-            <TabsTrigger value="tags" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="tags" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               <Tag className="h-4 w-4" />
               Tags
             </TabsTrigger>
           </TabsList>
+          
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard">
+            <Card className="mb-6">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <BarChart3 className="h-5 w-5" />
+                  Dashboard Geral
+                </CardTitle>
+                <div className="h-1 w-32 bg-primary mt-2 rounded-full" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                  {/* Published News Card */}
+                  <div className="bg-muted/30 rounded-lg p-6 border-l-4 border-primary">
+                    <p className="text-4xl font-bold text-primary text-center">
+                      {publishedNews.length.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                      Notícias Publicadas
+                    </p>
+                  </div>
+                  
+                  {/* Total Views Card */}
+                  <div className="bg-muted/30 rounded-lg p-6 border-l-4 border-primary">
+                    <p className="text-4xl font-bold text-primary text-center">
+                      {totalViews.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                      Visualizações Totais
+                    </p>
+                  </div>
+                  
+                  {/* Categories Card */}
+                  <div className="bg-muted/30 rounded-lg p-6 border-l-4 border-primary">
+                    <p className="text-4xl font-bold text-primary text-center">
+                      {categories.length.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                      Categorias
+                    </p>
+                  </div>
+                  
+                  {/* Tags Card */}
+                  <div className="bg-muted/30 rounded-lg p-6 border-l-4 border-primary">
+                    <p className="text-4xl font-bold text-primary text-center">
+                      {tags.length.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                      Tags
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Rascunhos</p>
+                          <p className="text-2xl font-bold text-yellow-600">
+                            {news.filter(n => !n.is_published && !n.scheduled_at).length}
+                          </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                          <Newspaper className="h-6 w-6 text-yellow-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Agendadas</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {news.filter(n => n.scheduled_at && !n.is_published).length}
+                          </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Clock className="h-6 w-6 text-blue-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Destaques</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {news.filter(n => n.is_featured).length}
+                          </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                          <Eye className="h-6 w-6 text-green-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="news">
             {/* News Management */}
