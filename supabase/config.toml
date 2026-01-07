@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.scheduled-backup]
 verify_jwt = false
+
+[functions.restore-backup]
+verify_jwt = false
