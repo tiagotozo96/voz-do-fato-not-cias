@@ -438,6 +438,12 @@ export const NewsletterManagement = () => {
                   </Select>
                 </div>
               </div>
+              {(searchQuery || statusFilter !== 'all') && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  {filteredSubscribers.length} {filteredSubscribers.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
+                  {searchQuery && ` para "${searchQuery}"`}
+                </p>
+              )}
               {filteredSubscribers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   {subscribers.length === 0 ? 'Nenhum assinante ainda.' : 'Nenhum assinante encontrado com este filtro.'}
