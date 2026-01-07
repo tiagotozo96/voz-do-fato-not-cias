@@ -1,103 +1,228 @@
 import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { SEOHead } from "@/components/SEOHead";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-import policiaNews1 from "@/assets/policia-news-1.jpg";
-import policiaNews2 from "@/assets/policia-news-2.jpg";
-import policiaNews3 from "@/assets/policia-news-3.jpg";
-import policiaNews4 from "@/assets/policia-news-4.jpg";
-import brasilNews from "@/assets/brasil-news.jpg";
-import tecnologiaNews from "@/assets/tecnologia-news.jpg";
-import economiaNews from "@/assets/economia-news.jpg";
-import esportesNews from "@/assets/esportes-news.jpg";
-import entretenimentoNews from "@/assets/entretenimento-news.jpg";
+interface NewsItem {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  image_url: string | null;
+  published_at: string | null;
+  slug: string;
+}
 
-const categoryData: Record<string, { title: string; color: string; news: any[] }> = {
-  brasil: {
-    title: "Brasil",
-    color: "from-green-950/20 to-green-900/10",
-    news: [
-      { title: "Governo anuncia novas medidas econômicas", description: "Pacote de medidas visa estimular crescimento e reduzir inflação.", image: brasilNews, category: "BRASIL", date: "23/11/2025" },
-      { title: "Congresso aprova reforma tributária", description: "Nova legislação promete simplificar sistema de impostos.", image: brasilNews, category: "BRASIL", date: "23/11/2025" },
-      { title: "Índices de emprego mostram recuperação", description: "Taxa de desemprego cai pelo terceiro mês consecutivo.", image: economiaNews, category: "BRASIL", date: "22/11/2025" },
-      { title: "Programa social atinge milhões de famílias", description: "Iniciativa federal amplia cobertura de benefícios.", image: brasilNews, category: "BRASIL", date: "22/11/2025" },
-    ],
-  },
-  policia: {
-    title: "Polícia",
-    color: "from-red-950/20 to-red-900/10",
-    news: [
-      { title: "Grande Operação Policial Desmantela Quadrilha na Capital", description: "Ação coordenada resulta em prisões e apreensões importantes.", image: policiaNews1, category: "POLÍCIA", date: "23/11/2025" },
-      { title: "Polícia Investiga Série de Crimes na Região Metropolitana", description: "Autoridades trabalham para identificar suspeitos envolvidos.", image: policiaNews2, category: "POLÍCIA", date: "23/11/2025" },
-      { title: "Coletiva de Imprensa Esclarece Detalhes de Operação", description: "Comando da polícia apresenta resultados de investigação.", image: policiaNews3, category: "POLÍCIA", date: "23/11/2025" },
-      { title: "Perícia Criminal Trabalha em Caso de Grande Repercussão", description: "Equipe forense coleta evidências em importante investigação.", image: policiaNews4, category: "POLÍCIA", date: "22/11/2025" },
-    ],
-  },
-  tecnologia: {
-    title: "Tecnologia",
-    color: "from-blue-950/20 to-blue-900/10",
-    news: [
-      { title: "Nova IA revoluciona setor de saúde", description: "Inteligência artificial auxilia diagnósticos médicos com precisão.", image: tecnologiaNews, category: "TECNOLOGIA", date: "23/11/2025" },
-      { title: "Startup brasileira recebe investimento milionário", description: "Empresa de tecnologia atrai atenção de investidores internacionais.", image: tecnologiaNews, category: "TECNOLOGIA", date: "23/11/2025" },
-      { title: "5G chega a novas capitais brasileiras", description: "Expansão da rede promete velocidades até 100x maiores.", image: tecnologiaNews, category: "TECNOLOGIA", date: "22/11/2025" },
-      { title: "Cibersegurança: dicas para proteger seus dados", description: "Especialistas alertam sobre novos golpes online.", image: tecnologiaNews, category: "TECNOLOGIA", date: "22/11/2025" },
-    ],
-  },
-  economia: {
-    title: "Economia",
-    color: "from-yellow-950/20 to-yellow-900/10",
-    news: [
-      { title: "Bolsa de valores atinge novo recorde", description: "Índice principal fecha em alta histórica impulsionado por commodities.", image: economiaNews, category: "ECONOMIA", date: "23/11/2025" },
-      { title: "Banco Central mantém taxa de juros", description: "Decisão reflete cenário de inflação controlada.", image: economiaNews, category: "ECONOMIA", date: "23/11/2025" },
-      { title: "Exportações brasileiras crescem 15%", description: "Agronegócio lidera vendas para o exterior.", image: economiaNews, category: "ECONOMIA", date: "22/11/2025" },
-      { title: "Mercado imobiliário aquece nas capitais", description: "Financiamentos crescem com novas taxas de juros.", image: economiaNews, category: "ECONOMIA", date: "22/11/2025" },
-    ],
-  },
-  esportes: {
-    title: "Esportes",
-    color: "from-emerald-950/20 to-emerald-900/10",
-    news: [
-      { title: "Seleção Brasileira convoca jogadores para eliminatórias", description: "Técnico anuncia lista com novidades para próximos jogos.", image: esportesNews, category: "ESPORTES", date: "23/11/2025" },
-      { title: "Campeonato Brasileiro: líder vence e abre vantagem", description: "Time da casa conquista vitória importante na rodada.", image: esportesNews, category: "ESPORTES", date: "23/11/2025" },
-      { title: "Atleta brasileiro quebra recorde mundial", description: "Competidor supera marca histórica em campeonato internacional.", image: esportesNews, category: "ESPORTES", date: "22/11/2025" },
-      { title: "Copa do Brasil: finais prometem grandes jogos", description: "Decisão será disputada entre rivais históricos.", image: esportesNews, category: "ESPORTES", date: "22/11/2025" },
-    ],
-  },
-  entretenimento: {
-    title: "Entretenimento",
-    color: "from-purple-950/20 to-purple-900/10",
-    news: [
-      { title: "Filme brasileiro concorre a prêmio internacional", description: "Produção nacional é indicada em festival de cinema.", image: entretenimentoNews, category: "ENTRETENIMENTO", date: "23/11/2025" },
-      { title: "Show de artista internacional esgota ingressos", description: "Turnê passa pelo Brasil com apresentações em várias cidades.", image: entretenimentoNews, category: "ENTRETENIMENTO", date: "23/11/2025" },
-      { title: "Série brasileira estreia em plataforma de streaming", description: "Produção original conquista público e crítica.", image: entretenimentoNews, category: "ENTRETENIMENTO", date: "22/11/2025" },
-      { title: "Festival de música anuncia line-up completo", description: "Evento reúne artistas nacionais e internacionais.", image: entretenimentoNews, category: "ENTRETENIMENTO", date: "22/11/2025" },
-    ],
-  },
+interface CategoryInfo {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
+
+const colorMap: Record<string, string> = {
+  brasil: "from-green-950/20 to-green-900/10",
+  policia: "from-red-950/20 to-red-900/10",
+  tecnologia: "from-blue-950/20 to-blue-900/10",
+  economia: "from-yellow-950/20 to-yellow-900/10",
+  esportes: "from-emerald-950/20 to-emerald-900/10",
+  entretenimento: "from-purple-950/20 to-purple-900/10",
+  mundo: "from-cyan-950/20 to-cyan-900/10",
 };
 
 const Category = () => {
   const { slug } = useParams<{ slug: string }>();
-  const category = categoryData[slug || ""] || categoryData.brasil;
+  const { toast } = useToast();
+  const [category, setCategory] = useState<CategoryInfo | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  useEffect(() => {
+    const fetchCategoryAndNews = async () => {
+      if (!slug) return;
+
+      setIsLoading(true);
+
+      // Fetch category
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('categories')
+        .select('id, name, slug, color')
+        .eq('slug', slug)
+        .single();
+
+      if (categoryError) {
+        console.error('Error fetching category:', categoryError);
+        setIsLoading(false);
+        return;
+      }
+
+      setCategory(categoryData);
+
+      // Fetch news for this category
+      const { data: newsData, error: newsError } = await supabase
+        .from('news')
+        .select('id, title, excerpt, image_url, published_at, slug')
+        .eq('category_id', categoryData.id)
+        .eq('is_published', true)
+        .order('published_at', { ascending: false })
+        .limit(20);
+
+      if (newsError) {
+        console.error('Error fetching news:', newsError);
+      } else {
+        setNews(newsData || []);
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchCategoryAndNews();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel(`category-${slug}-news`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'news',
+        },
+        async (payload) => {
+          if (!category) return;
+
+          if (payload.eventType === 'INSERT') {
+            const newRecord = payload.new as any;
+            
+            if (newRecord.is_published && newRecord.category_id === category.id) {
+              const { data } = await supabase
+                .from('news')
+                .select('id, title, excerpt, image_url, published_at, slug')
+                .eq('id', newRecord.id)
+                .single();
+
+              if (data) {
+                setNews((prev) => [data, ...prev.slice(0, 19)]);
+                toast({
+                  title: '📰 Nova notícia!',
+                  description: data.title,
+                });
+              }
+            }
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            const updatedRecord = payload.new as any;
+            
+            if (updatedRecord.is_published && updatedRecord.category_id === category.id) {
+              const { data } = await supabase
+                .from('news')
+                .select('id, title, excerpt, image_url, published_at, slug')
+                .eq('id', updatedRecord.id)
+                .single();
+
+              if (data) {
+                setNews((prev) => {
+                  const exists = prev.some((item) => item.id === data.id);
+                  if (exists) {
+                    return prev.map((item) => (item.id === data.id ? data : item));
+                  } else {
+                    return [data, ...prev.slice(0, 19)];
+                  }
+                });
+              }
+            } else {
+              // Remove if unpublished or changed category
+              setNews((prev) => prev.filter((item) => item.id !== updatedRecord.id));
+            }
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const deletedRecord = payload.old as any;
+            setNews((prev) => prev.filter((item) => item.id !== deletedRecord.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [slug, category?.id, toast]);
+
+  const gradientColor = colorMap[slug || ''] || 'from-gray-950/20 to-gray-900/10';
+
+  const NewsCardSkeleton = () => (
+    <div className="space-y-3">
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <Skeleton className="h-4 w-20" />
+      <Skeleton className="h-6 w-full" />
+      <Skeleton className="h-4 w-3/4" />
+    </div>
+  );
+
+  const featuredNews = news.slice(0, 4);
+  const moreNews = news.slice(4);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title={category ? `${category.name} - Portal de Notícias` : 'Categoria'}
+        description={category ? `Últimas notícias de ${category.name}` : ''}
+      />
       <Header />
 
       <main className="flex-1">
-        <section className={`bg-gradient-to-r ${category.color} py-12 border-y-4 border-primary`}>
+        <section className={`bg-gradient-to-r ${gradientColor} py-12 border-y-4 border-primary`}>
           <div className="container mx-auto px-4">
             <div className="mb-8">
               <h1 className="text-4xl font-display font-bold border-l-4 border-primary pl-4 flex items-center gap-3">
-                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-md">{category.title.toUpperCase()}</span>
+                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-md">
+                  {category?.name?.toUpperCase() || 'CATEGORIA'}
+                </span>
                 Últimas Notícias
               </h1>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {category.news.map((news, index) => (
-                <NewsCard key={index} {...news} />
-              ))}
+              {isLoading ? (
+                <>
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                </>
+              ) : featuredNews.length > 0 ? (
+                featuredNews.map((item) => (
+                  <NewsCard
+                    key={item.id}
+                    title={item.title}
+                    description={item.excerpt || ''}
+                    image={item.image_url || ''}
+                    category={category?.name?.toUpperCase() || ''}
+                    date={formatDate(item.published_at)}
+                    slug={item.slug}
+                  />
+                ))
+              ) : (
+                <p className="col-span-4 text-center text-muted-foreground py-8">
+                  Nenhuma notícia disponível nesta categoria.
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -106,18 +231,28 @@ const Category = () => {
           <AdBanner size="large" />
         </section>
 
-        <section className="container mx-auto px-4 pb-12">
-          <div className="mb-8">
-            <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4">
-              Mais Notícias de {category.title}
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {category.news.map((news, index) => (
-              <NewsCard key={`more-${index}`} {...news} />
-            ))}
-          </div>
-        </section>
+        {moreNews.length > 0 && (
+          <section className="container mx-auto px-4 pb-12">
+            <div className="mb-8">
+              <h2 className="text-3xl font-display font-bold border-l-4 border-primary pl-4">
+                Mais Notícias de {category?.name}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {moreNews.map((item) => (
+                <NewsCard
+                  key={item.id}
+                  title={item.title}
+                  description={item.excerpt || ''}
+                  image={item.image_url || ''}
+                  category={category?.name?.toUpperCase() || ''}
+                  date={formatDate(item.published_at)}
+                  slug={item.slug}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <Footer />
