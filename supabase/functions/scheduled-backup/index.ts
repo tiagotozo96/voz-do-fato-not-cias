@@ -1,9 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -124,6 +127,48 @@ Deno.serve(async (req) => {
     }
 
     console.log('Backup completed successfully!');
+
+    // Send email notification
+    const adminEmail = Deno.env.get('BACKUP_NOTIFICATION_EMAIL');
+    if (adminEmail && resend) {
+      try {
+        console.log('Sending backup notification email to:', adminEmail);
+        await resend.emails.send({
+          from: 'Backup System <onboarding@resend.dev>',
+          to: [adminEmail],
+          subject: `✅ Backup Automático Concluído - ${filename}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #10b981;">✅ Backup Concluído com Sucesso</h1>
+              <p>O backup automático foi realizado com sucesso.</p>
+              
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📊 Estatísticas do Backup</h3>
+                <ul style="list-style: none; padding: 0;">
+                  <li>📰 <strong>Notícias:</strong> ${backup.stats.newsCount}</li>
+                  <li>📁 <strong>Categorias:</strong> ${backup.stats.categoriesCount}</li>
+                  <li>🏷️ <strong>Tags:</strong> ${backup.stats.tagsCount}</li>
+                  <li>📧 <strong>Assinantes:</strong> ${backup.stats.subscribersCount}</li>
+                </ul>
+              </div>
+              
+              <p><strong>Arquivo:</strong> ${filename}</p>
+              <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+              
+              <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                Este é um email automático do sistema de backup.
+              </p>
+            </div>
+          `,
+        });
+        console.log('Backup notification email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending backup notification email:', emailError);
+        // Don't throw - backup was successful, email failure is non-critical
+      }
+    } else {
+      console.log('No BACKUP_NOTIFICATION_EMAIL configured, skipping notification');
+    }
 
     return new Response(
       JSON.stringify({
