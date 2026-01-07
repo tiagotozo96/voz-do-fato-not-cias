@@ -1,11 +1,14 @@
 import { useParams, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdBanner } from "@/components/AdBanner";
 import { SEOHead } from "@/components/SEOHead";
 import { ShareButtons } from "@/components/ShareButtons";
 import { LazyImage } from "@/components/LazyImage";
+import { NewsPoll } from "@/components/NewsPoll";
+import { RelatedNews } from "@/components/RelatedNews";
+import { Comments } from "@/components/Comments";
 import { Calendar, Clock, User, ChevronRight, Loader2, Eye, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,29 +33,38 @@ interface NewsDetail {
   } | null;
 }
 
-interface RelatedNews {
-  id: string;
-  title: string;
-  slug: string;
-  image_url: string | null;
-  category: {
-    name: string;
-    slug: string;
-  } | null;
-}
-
 interface TagItem {
   id: string;
   name: string;
   slug: string;
 }
 
+interface Comment {
+  id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
 const NoticiaDetalhe = () => {
   const { slug } = useParams<{ slug: string }>();
   const [news, setNews] = useState<NewsDetail | null>(null);
-  const [relatedNews, setRelatedNews] = useState<RelatedNews[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchComments = useCallback(async (newsId: string) => {
+    const { data, error } = await supabase
+      .from("comments")
+      .select("id, author_name, content, created_at")
+      .eq("news_id", newsId)
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setComments(data);
+    }
+  }, []);
 
   const fetchNews = async () => {
     if (!slug) return;
@@ -101,49 +113,9 @@ const NoticiaDetalhe = () => {
             .filter((t: any) => t !== null) as TagItem[];
           setTags(tagsList);
         }
-        // Fetch related news from same category
-        if (data.category_id) {
-          const { data: related, error: relatedError } = await supabase
-            .from("news")
-            .select(`
-              id,
-              title,
-              slug,
-              image_url,
-              category:categories(name, slug)
-            `)
-            .eq("is_published", true)
-            .eq("category_id", data.category_id)
-            .neq("id", data.id)
-            .order("published_at", { ascending: false })
-            .limit(4);
 
-          if (!relatedError && related) {
-            setRelatedNews(related);
-          }
-        }
-        
-        // If not enough related news from same category, fetch recent news
-        if (relatedNews.length < 4) {
-          const existingIds = [data.id, ...relatedNews.map(r => r.id)];
-          const { data: moreNews, error: moreError } = await supabase
-            .from("news")
-            .select(`
-              id,
-              title,
-              slug,
-              image_url,
-              category:categories(name, slug)
-            `)
-            .eq("is_published", true)
-            .not("id", "in", `(${existingIds.join(",")})`)
-            .order("published_at", { ascending: false })
-            .limit(4 - relatedNews.length);
-
-          if (!moreError && moreNews) {
-            setRelatedNews(prev => [...prev, ...moreNews].slice(0, 4));
-          }
-        }
+        // Fetch comments
+        await fetchComments(data.id);
       }
     } catch (error) {
       console.error("Erro ao carregar notícia:", error);
@@ -330,6 +302,20 @@ const NoticiaDetalhe = () => {
             <div className="mt-8 p-4 bg-muted/50 rounded-lg">
               <ShareButtons title={news.title} description={news.excerpt || ""} variant="full" />
             </div>
+
+            {/* Poll */}
+            <div className="mt-8">
+              <NewsPoll newsId={news.id} />
+            </div>
+
+            {/* Comments */}
+            <div className="mt-8">
+              <Comments
+                newsId={news.id}
+                comments={comments}
+                onCommentAdded={() => fetchComments(news.id)}
+              />
+            </div>
           </article>
 
           {/* Sidebar */}
@@ -337,38 +323,11 @@ const NoticiaDetalhe = () => {
             <AdBanner />
 
             {/* Related News */}
-            {relatedNews.length > 0 && (
-              <div className="bg-card rounded-lg p-4 border border-border">
-                <h3 className="text-lg font-bold text-foreground mb-4 pb-2 border-b border-border">
-                  Notícias Relacionadas
-                </h3>
-                <div className="space-y-4">
-                  {relatedNews.map((item) => (
-                    <Link
-                      key={item.id}
-                      to={`/noticia/${item.slug}`}
-                      className="flex gap-3 group"
-                    >
-                      <LazyImage
-                        src={item.image_url || "/placeholder.svg"}
-                        alt={item.title}
-                        className="w-20 h-16 rounded flex-shrink-0"
-                      />
-                      <div>
-                        {item.category && (
-                          <span className="text-xs text-primary font-semibold">
-                            {item.category.name}
-                          </span>
-                        )}
-                        <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                          {item.title}
-                        </h4>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            <RelatedNews
+              newsId={news.id}
+              categoryId={news.category_id}
+              tags={tags.map((t) => t.id)}
+            />
 
             {/* Newsletter */}
             <div className="bg-primary/10 rounded-lg p-4">
