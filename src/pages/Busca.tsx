@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { SEOHead } from "@/components/SEOHead";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NewsItem {
   id: string;
@@ -32,14 +34,17 @@ const Busca = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeQuery, setActiveQuery] = useState("");
+  const { toast } = useToast();
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  const handleSearch = async (searchQuery: string, page: number = 1) => {
+  const handleSearch = useCallback(async (searchQuery: string, page: number = 1) => {
     if (!searchQuery.trim()) return;
 
     setIsLoading(true);
     setHasSearched(true);
+    setActiveQuery(searchQuery);
     setSearchParams({ q: searchQuery, page: page.toString() });
 
     const from = (page - 1) * ITEMS_PER_PAGE;
@@ -82,7 +87,7 @@ const Busca = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setSearchParams]);
 
   useEffect(() => {
     const initialQuery = searchParams.get("q");
@@ -92,6 +97,100 @@ const Busca = () => {
       handleSearch(initialQuery, initialPage);
     }
   }, []);
+
+  // Realtime subscription for search results
+  useEffect(() => {
+    if (!activeQuery) return;
+
+    const channel = supabase
+      .channel('search-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'news',
+        },
+        async (payload) => {
+          const checkMatch = (record: any) => {
+            const q = activeQuery.toLowerCase();
+            return (
+              record.title?.toLowerCase().includes(q) ||
+              record.content?.toLowerCase().includes(q) ||
+              record.excerpt?.toLowerCase().includes(q)
+            );
+          };
+
+          if (payload.eventType === 'INSERT') {
+            const newRecord = payload.new as any;
+            
+            if (newRecord.is_published && checkMatch(newRecord)) {
+              const { data } = await supabase
+                .from('news')
+                .select(`
+                  id, title, excerpt, image_url, published_at, slug,
+                  category:categories(name, slug)
+                `)
+                .eq('id', newRecord.id)
+                .single();
+
+              if (data) {
+                setResults((prev) => [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)]);
+                setTotalCount((prev) => prev + 1);
+                toast({
+                  title: '📰 Novo resultado!',
+                  description: data.title,
+                });
+              }
+            }
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            const updatedRecord = payload.new as any;
+            const matches = updatedRecord.is_published && checkMatch(updatedRecord);
+            
+            if (matches) {
+              const { data } = await supabase
+                .from('news')
+                .select(`
+                  id, title, excerpt, image_url, published_at, slug,
+                  category:categories(name, slug)
+                `)
+                .eq('id', updatedRecord.id)
+                .single();
+
+              if (data) {
+                setResults((prev) => {
+                  const exists = prev.some((item) => item.id === data.id);
+                  if (exists) {
+                    return prev.map((item) => (item.id === data.id ? data : item));
+                  }
+                  return [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)];
+                });
+              }
+            } else {
+              setResults((prev) => prev.filter((item) => item.id !== updatedRecord.id));
+            }
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const deletedRecord = payload.old as any;
+            setResults((prev) => {
+              const hadItem = prev.some((item) => item.id === deletedRecord.id);
+              if (hadItem) {
+                setTotalCount((c) => Math.max(0, c - 1));
+              }
+              return prev.filter((item) => item.id !== deletedRecord.id);
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeQuery, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,6 +274,10 @@ const Busca = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEOHead
+        title={activeQuery ? `Busca: ${activeQuery} - Portal de Notícias` : 'Buscar Notícias'}
+        description="Busque notícias no nosso portal"
+      />
       <Header />
 
       <main className="flex-1">
