@@ -9,6 +9,7 @@ import { InstagramExtension } from '@/extensions/InstagramExtension';
 import { TikTokExtension } from '@/extensions/TikTokExtension';
 import { SpotifyExtension } from '@/extensions/SpotifyExtension';
 import { GoogleMapsExtension } from '@/extensions/GoogleMapsExtension';
+import { FacebookExtension } from '@/extensions/FacebookExtension';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GoogleMapsPreviewDialog } from '@/components/GoogleMapsPreviewDialog';
@@ -44,7 +45,8 @@ import {
   Disc3,
   MapPin,
   Play,
-  ChevronDown
+  ChevronDown,
+  Facebook
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -95,6 +97,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       TikTokExtension,
       SpotifyExtension,
       GoogleMapsExtension,
+      FacebookExtension,
       Placeholder.configure({
         placeholder,
       }),
@@ -268,7 +271,17 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     }
   };
 
-  const ToolbarButton = ({ 
+  const addFacebookEmbed = () => {
+    const url = window.prompt('URL do post do Facebook:');
+    if (url) {
+      const success = editor.chain().focus().setFacebookEmbed({ src: url }).run();
+      if (!success) {
+        toast.error('URL do Facebook inválida. Cole a URL de um post, foto, vídeo ou reel do Facebook.');
+      }
+    }
+  };
+
+  const ToolbarButton = ({
     onClick, 
     isActive = false, 
     children,
@@ -299,6 +312,7 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     { icon: Video, label: 'Vimeo', onClick: addVimeoVideo },
     { icon: Twitter, label: 'Twitter/X', onClick: addTwitterEmbed },
     { icon: Instagram, label: 'Instagram', onClick: addInstagramEmbed },
+    { icon: Facebook, label: 'Facebook', onClick: addFacebookEmbed },
     { icon: Music, label: 'TikTok', onClick: addTikTokEmbed },
     { icon: Disc3, label: 'Spotify', onClick: addSpotifyEmbed },
     { icon: MapPin, label: 'Google Maps', onClick: openGoogleMapsDialog },
