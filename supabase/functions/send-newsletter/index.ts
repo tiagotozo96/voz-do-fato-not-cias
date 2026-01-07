@@ -78,13 +78,14 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("[send-newsletter] Fetching active subscribers...");
+    console.log("[send-newsletter] Fetching confirmed and active subscribers...");
 
-    // Get all active subscribers
+    // Get all confirmed and active subscribers
     const { data: subscribers, error: fetchError } = await supabase
       .from("newsletter_subscribers")
       .select("email, name")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("is_confirmed", true);
 
     if (fetchError) {
       console.error("[send-newsletter] Error fetching subscribers:", fetchError);
