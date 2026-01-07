@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle, Mail } from 'lucide-react';
 import { CommentsModeration } from '@/components/admin/CommentsModeration';
 import { DashboardCharts } from '@/components/admin/DashboardCharts';
+import { NewsletterManagement } from '@/components/admin/NewsletterManagement';
 import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -581,6 +582,13 @@ const Admin = () => {
             >
               <Tag className="h-4 w-4" />
               Tags
+            </TabsTrigger>
+            <TabsTrigger 
+              value="newsletter" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Mail className="h-4 w-4" />
+              Newsletter
             </TabsTrigger>
           </TabsList>
           
@@ -1255,6 +1263,11 @@ const Admin = () => {
           {/* Comments Tab */}
           <TabsContent value="comments">
             <CommentsModeration />
+          </TabsContent>
+
+          {/* Newsletter Tab */}
+          <TabsContent value="newsletter">
+            <NewsletterManagement />
           </TabsContent>
         </Tabs>
       </main>
