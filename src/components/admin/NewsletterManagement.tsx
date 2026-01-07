@@ -65,7 +65,7 @@ export const NewsletterManagement = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<'email' | 'subscribed_at'>('subscribed_at');
+  const [sortField, setSortField] = useState<'email' | 'name' | 'subscribed_at'>('subscribed_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
   
@@ -253,6 +253,11 @@ export const NewsletterManagement = () => {
     if (sortField === 'email') {
       const comparison = a.email.localeCompare(b.email);
       return sortDirection === 'asc' ? comparison : -comparison;
+    } else if (sortField === 'name') {
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      const comparison = nameA.localeCompare(nameB);
+      return sortDirection === 'asc' ? comparison : -comparison;
     } else {
       const comparison = new Date(a.subscribed_at).getTime() - new Date(b.subscribed_at).getTime();
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -276,7 +281,7 @@ export const NewsletterManagement = () => {
     setCurrentPage(1);
   };
 
-  const handleSort = (field: 'email' | 'subscribed_at') => {
+  const handleSort = (field: 'email' | 'name' | 'subscribed_at') => {
     if (sortField === field) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -286,7 +291,7 @@ export const NewsletterManagement = () => {
     setCurrentPage(1);
   };
 
-  const SortIcon = ({ field }: { field: 'email' | 'subscribed_at' }) => {
+  const SortIcon = ({ field }: { field: 'email' | 'name' | 'subscribed_at' }) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
     return sortDirection === 'asc' 
       ? <ArrowUp className="h-4 w-4 ml-1" />
@@ -506,7 +511,15 @@ export const NewsletterManagement = () => {
                             <SortIcon field="email" />
                           </button>
                         </TableHead>
-                        <TableHead>Nome</TableHead>
+                        <TableHead>
+                          <button
+                            onClick={() => handleSort('name')}
+                            className="flex items-center hover:text-foreground transition-colors"
+                          >
+                            Nome
+                            <SortIcon field="name" />
+                          </button>
+                        </TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Confirmado</TableHead>
                         <TableHead>
