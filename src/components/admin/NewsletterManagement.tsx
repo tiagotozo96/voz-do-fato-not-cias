@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -439,10 +439,25 @@ export const NewsletterManagement = () => {
                 </div>
               </div>
               {(searchQuery || statusFilter !== 'all') && (
-                <p className="text-sm text-muted-foreground mb-4">
-                  {filteredSubscribers.length} {filteredSubscribers.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-                  {searchQuery && ` para "${searchQuery}"`}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredSubscribers.length} {filteredSubscribers.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
+                    {searchQuery && ` para "${searchQuery}"`}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setStatusFilter('all');
+                      setCurrentPage(1);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar filtros
+                  </Button>
+                </div>
               )}
               {filteredSubscribers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
