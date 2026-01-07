@@ -18,6 +18,7 @@ import Contato from "./pages/Contato";
 import Busca from "./pages/Busca";
 import Tag from "./pages/Tag";
 import Unsubscribe from "./pages/Unsubscribe";
+import ConfirmNewsletter from "./pages/ConfirmNewsletter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/busca" element={<Busca />} />
             <Route path="/tag/:slug" element={<Tag />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/confirm-newsletter" element={<ConfirmNewsletter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

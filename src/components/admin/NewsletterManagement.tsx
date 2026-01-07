@@ -32,7 +32,9 @@ interface Subscriber {
   email: string;
   name: string | null;
   is_active: boolean;
+  is_confirmed: boolean;
   subscribed_at: string;
+  confirmed_at: string | null;
 }
 
 interface Campaign {
@@ -189,7 +191,8 @@ export const NewsletterManagement = () => {
     }
   };
 
-  const activeSubscribers = subscribers.filter(s => s.is_active).length;
+  const activeSubscribers = subscribers.filter(s => s.is_active && s.is_confirmed).length;
+  const pendingSubscribers = subscribers.filter(s => !s.is_confirmed).length;
 
   if (isLoading) {
     return (
@@ -202,7 +205,7 @@ export const NewsletterManagement = () => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -219,7 +222,7 @@ export const NewsletterManagement = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Assinantes Ativos</p>
+                <p className="text-sm text-muted-foreground">Confirmados e Ativos</p>
                 <p className="text-3xl font-bold text-green-600">{activeSubscribers}</p>
               </div>
               <CheckCircle className="h-10 w-10 text-green-600 opacity-80" />
@@ -231,7 +234,19 @@ export const NewsletterManagement = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Campanhas Enviadas</p>
+                <p className="text-sm text-muted-foreground">Pendentes</p>
+                <p className="text-3xl font-bold text-yellow-600">{pendingSubscribers}</p>
+              </div>
+              <Mail className="h-10 w-10 text-yellow-600 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Campanhas</p>
                 <p className="text-3xl font-bold text-blue-600">{campaigns.length}</p>
               </div>
               <Send className="h-10 w-10 text-blue-600 opacity-80" />
@@ -339,6 +354,7 @@ export const NewsletterManagement = () => {
                         <TableHead>E-mail</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Confirmado</TableHead>
                         <TableHead>Inscrito em</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -354,6 +370,17 @@ export const NewsletterManagement = () => {
                             <Badge variant={subscriber.is_active ? 'default' : 'secondary'}>
                               {subscriber.is_active ? 'Ativo' : 'Inativo'}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {subscriber.is_confirmed ? (
+                              <Badge variant="outline" className="text-green-600 border-green-600">
+                                Confirmado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                                Pendente
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {format(new Date(subscriber.subscribed_at), "dd/MM/yyyy", { locale: ptBR })}

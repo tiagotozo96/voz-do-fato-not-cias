@@ -34,27 +34,29 @@ export const NewsletterSubscription = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('newsletter_subscribers')
-        .insert({
+      const response = await supabase.functions.invoke('confirm-newsletter-subscription', {
+        body: {
           email: validation.data.email,
           name: validation.data.name || null,
-        });
+        },
+      });
 
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: 'E-mail já cadastrado',
-            description: 'Este e-mail já está inscrito em nossa newsletter.',
-            variant: 'destructive',
-          });
-        } else {
-          throw error;
-        }
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.data;
+
+      if (data.error === 'already_subscribed') {
+        toast({
+          title: 'E-mail já cadastrado',
+          description: 'Este e-mail já está inscrito em nossa newsletter.',
+          variant: 'destructive',
+        });
       } else {
         toast({
-          title: 'Inscrição realizada!',
-          description: 'Você receberá nossas últimas notícias por e-mail.',
+          title: 'Verifique seu e-mail!',
+          description: 'Enviamos um link de confirmação para seu e-mail. Clique nele para confirmar sua inscrição.',
         });
         setEmail('');
         setName('');
@@ -105,7 +107,7 @@ export const NewsletterSubscription = () => {
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Inscrevendo...
+              Enviando...
             </>
           ) : (
             'Inscrever-se'
