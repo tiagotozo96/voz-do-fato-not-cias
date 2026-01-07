@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle } from 'lucide-react';
 import { CommentsModeration } from '@/components/admin/CommentsModeration';
+import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -688,6 +689,9 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Charts Section */}
+            <DashboardCharts news={news} categories={categories} />
           </TabsContent>
           
           <TabsContent value="news">
