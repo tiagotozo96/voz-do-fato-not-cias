@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle } from 'lucide-react';
+import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -53,6 +53,7 @@ export const NewsletterManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   
   // Form state
   const [subject, setSubject] = useState('');
@@ -189,6 +190,34 @@ export const NewsletterManagement = () => {
       toast({ title: currentStatus ? 'Assinante desativado' : 'Assinante reativado' });
       fetchData();
     }
+  };
+
+  const handleResendConfirmation = async (subscriber: Subscriber) => {
+    setResendingId(subscriber.id);
+    
+    try {
+      const response = await supabase.functions.invoke('confirm-newsletter-subscription', {
+        body: { email: subscriber.email, name: subscriber.name },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({
+        title: 'E-mail reenviado!',
+        description: `E-mail de confirmação reenviado para ${subscriber.email}`,
+      });
+    } catch (error: any) {
+      console.error('Error resending confirmation:', error);
+      toast({
+        title: 'Erro ao reenviar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+    
+    setResendingId(null);
   };
 
   const activeSubscribers = subscribers.filter(s => s.is_active && s.is_confirmed).length;
@@ -387,6 +416,21 @@ export const NewsletterManagement = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
+                              {!subscriber.is_confirmed && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleResendConfirmation(subscriber)}
+                                  disabled={resendingId === subscriber.id}
+                                  title="Reenviar e-mail de confirmação"
+                                >
+                                  {resendingId === subscriber.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4 text-blue-600" />
+                                  )}
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
