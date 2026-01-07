@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Download, FileJson, FileSpreadsheet, Database, Tag, FolderOpen, Newspaper, Mail, Clock, Trash2, RefreshCw, Calendar } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, Download, FileJson, FileSpreadsheet, Database, Tag, FolderOpen, Newspaper, Mail, Clock, Trash2, RefreshCw, Calendar, Upload, RotateCcw, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -36,6 +54,20 @@ export const DataExport = () => {
     tags: true,
     subscribers: false,
   });
+
+  // Restore state
+  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupToRestore, setBackupToRestore] = useState<any>(null);
+  const [restoreOptions, setRestoreOptions] = useState({
+    restoreNews: true,
+    restoreCategories: true,
+    restoreTags: true,
+    restoreSubscribers: false,
+    clearExisting: false,
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSavedBackups();
@@ -325,6 +357,98 @@ export const DataExport = () => {
     setIsExporting(false);
   };
 
+  // Restore functions
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backup = JSON.parse(e.target?.result as string);
+        setBackupToRestore(backup);
+        setIsRestoreDialogOpen(true);
+      } catch (error) {
+        toast({
+          title: 'Erro ao ler arquivo',
+          description: 'O arquivo não é um JSON válido.',
+          variant: 'destructive',
+        });
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const restoreFromSavedBackup = async (filename: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('backups')
+        .download(filename);
+
+      if (error) throw error;
+
+      const text = await data.text();
+      const backup = JSON.parse(text);
+      setBackupToRestore(backup);
+      setIsRestoreDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar backup',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleRestoreOption = (key: keyof typeof restoreOptions) => {
+    setRestoreOptions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleConfirmRestore = () => {
+    setIsRestoreDialogOpen(false);
+    setIsConfirmRestoreOpen(true);
+  };
+
+  const executeRestore = async () => {
+    setIsConfirmRestoreOpen(false);
+    setIsRestoring(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('restore-backup', {
+        body: {
+          backup: backupToRestore,
+          options: restoreOptions,
+        },
+      });
+
+      if (error) throw error;
+
+      const results = data.results;
+      const summary = [];
+      if (results.categories?.restored > 0) summary.push(`${results.categories.restored} categorias`);
+      if (results.tags?.restored > 0) summary.push(`${results.tags.restored} tags`);
+      if (results.news?.restored > 0) summary.push(`${results.news.restored} notícias`);
+      if (results.subscribers?.restored > 0) summary.push(`${results.subscribers.restored} assinantes`);
+
+      toast({
+        title: 'Restauração concluída!',
+        description: summary.length > 0 ? `Restaurados: ${summary.join(', ')}.` : 'Nenhum dado foi restaurado.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao restaurar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+
+    setIsRestoring(false);
+    setBackupToRestore(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Full Backup Card */}
@@ -535,11 +659,20 @@ export const DataExport = () => {
                         {backup.metadata?.size ? formatFileSize(backup.metadata.size) : '-'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => restoreFromSavedBackup(backup.name)}
+                        title="Restaurar"
+                      >
+                        <RotateCcw className="h-4 w-4 text-green-600" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => downloadSavedBackup(backup.name)}
+                        title="Baixar"
                       >
                         <Download className="h-4 w-4" />
                       </Button>
@@ -547,6 +680,7 @@ export const DataExport = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => deleteSavedBackup(backup.name)}
+                        title="Excluir"
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -558,6 +692,177 @@ export const DataExport = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Restore from File Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-green-600" />
+            Restaurar Backup
+          </CardTitle>
+          <CardDescription>
+            Restaure dados a partir de um arquivo de backup JSON
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isRestoring}
+            className="w-full"
+          >
+            {isRestoring ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
+            {isRestoring ? 'Restaurando...' : 'Selecionar Arquivo de Backup'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Restore Options Dialog */}
+      <Dialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-green-600" />
+              Restaurar Backup
+            </DialogTitle>
+            <DialogDescription>
+              Selecione quais dados deseja restaurar do backup.
+            </DialogDescription>
+          </DialogHeader>
+
+          {backupToRestore && (
+            <div className="space-y-4">
+              <div className="bg-muted p-3 rounded-lg text-sm">
+                <p><strong>Data do backup:</strong> {backupToRestore.exportedAt ? format(new Date(backupToRestore.exportedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Não informada'}</p>
+                {backupToRestore.stats && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-muted-foreground">
+                    <span>📰 {backupToRestore.stats.newsCount || backupToRestore.news?.length || 0} notícias</span>
+                    <span>📁 {backupToRestore.stats.categoriesCount || backupToRestore.categories?.length || 0} categorias</span>
+                    <span>🏷️ {backupToRestore.stats.tagsCount || backupToRestore.tags?.length || 0} tags</span>
+                    <span>📧 {backupToRestore.stats.subscribersCount || backupToRestore.subscribers?.length || 0} assinantes</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="restoreNews"
+                    checked={restoreOptions.restoreNews}
+                    onCheckedChange={() => toggleRestoreOption('restoreNews')}
+                    disabled={!backupToRestore.news?.length}
+                  />
+                  <Label htmlFor="restoreNews" className="flex items-center gap-2 cursor-pointer">
+                    <Newspaper className="h-4 w-4" />
+                    Notícias ({backupToRestore.news?.length || 0})
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="restoreCategories"
+                    checked={restoreOptions.restoreCategories}
+                    onCheckedChange={() => toggleRestoreOption('restoreCategories')}
+                    disabled={!backupToRestore.categories?.length}
+                  />
+                  <Label htmlFor="restoreCategories" className="flex items-center gap-2 cursor-pointer">
+                    <FolderOpen className="h-4 w-4" />
+                    Categorias ({backupToRestore.categories?.length || 0})
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="restoreTags"
+                    checked={restoreOptions.restoreTags}
+                    onCheckedChange={() => toggleRestoreOption('restoreTags')}
+                    disabled={!backupToRestore.tags?.length}
+                  />
+                  <Label htmlFor="restoreTags" className="flex items-center gap-2 cursor-pointer">
+                    <Tag className="h-4 w-4" />
+                    Tags ({backupToRestore.tags?.length || 0})
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="restoreSubscribers"
+                    checked={restoreOptions.restoreSubscribers}
+                    onCheckedChange={() => toggleRestoreOption('restoreSubscribers')}
+                    disabled={!backupToRestore.subscribers?.length}
+                  />
+                  <Label htmlFor="restoreSubscribers" className="flex items-center gap-2 cursor-pointer">
+                    <Mail className="h-4 w-4" />
+                    Assinantes ({backupToRestore.subscribers?.length || 0})
+                  </Label>
+                </div>
+
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="clearExisting"
+                      checked={restoreOptions.clearExisting}
+                      onCheckedChange={() => toggleRestoreOption('clearExisting')}
+                    />
+                    <Label htmlFor="clearExisting" className="flex items-center gap-2 cursor-pointer text-destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      Limpar dados existentes antes de restaurar
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRestoreDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmRestore}
+              disabled={!Object.entries(restoreOptions).filter(([k]) => k.startsWith('restore')).some(([, v]) => v)}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Restaurar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Restore Alert */}
+      <AlertDialog open={isConfirmRestoreOpen} onOpenChange={setIsConfirmRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Confirmar Restauração
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {restoreOptions.clearExisting ? (
+                <span className="text-destructive font-semibold">
+                  ATENÇÃO: Todos os dados existentes selecionados serão EXCLUÍDOS e substituídos pelos dados do backup. Esta ação não pode ser desfeita!
+                </span>
+              ) : (
+                'Os dados do backup serão adicionados/atualizados. Registros existentes com o mesmo ID serão sobrescritos.'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeRestore} className={restoreOptions.clearExisting ? 'bg-destructive hover:bg-destructive/90' : ''}>
+              {restoreOptions.clearExisting ? 'Sim, excluir e restaurar' : 'Confirmar restauração'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
