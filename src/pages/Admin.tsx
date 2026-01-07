@@ -10,10 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle, Mail } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Newspaper, Eye, LayoutDashboard, Tag, X, FolderOpen, CalendarIcon, Clock, BarChart3, MessageCircle, Mail, Activity } from 'lucide-react';
 import { CommentsModeration } from '@/components/admin/CommentsModeration';
 import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import { NewsletterManagement } from '@/components/admin/NewsletterManagement';
+import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -589,6 +590,13 @@ const Admin = () => {
             >
               <Mail className="h-4 w-4" />
               Newsletter
+            </TabsTrigger>
+            <TabsTrigger 
+              value="logs" 
+              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Activity className="h-4 w-4" />
+              Logs
             </TabsTrigger>
           </TabsList>
           
@@ -1268,6 +1276,11 @@ const Admin = () => {
           {/* Newsletter Tab */}
           <TabsContent value="newsletter">
             <NewsletterManagement />
+          </TabsContent>
+
+          {/* Activity Logs Tab */}
+          <TabsContent value="logs">
+            <ActivityLogs />
           </TabsContent>
         </Tabs>
       </main>
