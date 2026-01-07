@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import Youtube from '@tiptap/extension-youtube';
 import { ResizableImageExtension } from '@/extensions/ResizableImageExtension';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,8 @@ import {
   Heading3,
   Minus,
   Upload,
-  Loader2
+  Loader2,
+  Youtube as YoutubeIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +57,14 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
       ResizableImageExtension.configure({
         HTMLAttributes: {
           class: 'max-w-full rounded-lg',
+        },
+      }),
+      Youtube.configure({
+        width: 640,
+        height: 360,
+        nocookie: true,
+        HTMLAttributes: {
+          class: 'rounded-lg my-4',
         },
       }),
       Placeholder.configure({
@@ -161,6 +171,13 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
     const url = window.prompt('URL da imagem:');
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
+    }
+  };
+
+  const addYoutubeVideo = () => {
+    const url = window.prompt('URL do vídeo do YouTube:');
+    if (url) {
+      editor.chain().focus().setYoutubeVideo({ src: url }).run();
     }
   };
 
@@ -308,6 +325,12 @@ export const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o con
           title="Upload de imagem"
         >
           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={addYoutubeVideo}
+          title="Adicionar vídeo do YouTube"
+        >
+          <YoutubeIcon className="h-4 w-4" />
         </ToolbarButton>
         <input
           ref={fileInputRef}
