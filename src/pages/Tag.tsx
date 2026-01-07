@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, ChevronRight, Tag as TagIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NewsItem {
   id: string;
@@ -31,15 +33,17 @@ const ITEMS_PER_PAGE = 9;
 
 const TagPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
   const [tag, setTag] = useState<TagInfo | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [newsIds, setNewsIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  const fetchTagAndNews = async (page: number) => {
+  const fetchTagAndNews = useCallback(async (page: number) => {
     if (!slug) return;
     
     setIsLoading(true);
@@ -80,7 +84,8 @@ const TagPage = () => {
       if (newsTagsError) throw newsTagsError;
 
       if (newsTagsData && newsTagsData.length > 0) {
-        const newsIds = newsTagsData.map((nt) => nt.news_id);
+        const ids = newsTagsData.map((nt) => nt.news_id);
+        setNewsIds(ids);
 
         const { data: newsData, error: newsError } = await supabase
           .from("news")
@@ -93,13 +98,14 @@ const TagPage = () => {
             slug,
             category:categories(name, slug)
           `)
-          .in("id", newsIds)
+          .in("id", ids)
           .eq("is_published", true)
           .order("published_at", { ascending: false });
 
         if (newsError) throw newsError;
         setNews(newsData || []);
       } else {
+        setNewsIds([]);
         setNews([]);
       }
 
@@ -110,11 +116,119 @@ const TagPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
     fetchTagAndNews(1);
-  }, [slug]);
+  }, [slug, fetchTagAndNews]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!tag) return;
+
+    const channel = supabase
+      .channel(`tag-${tag.id}-realtime`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'news',
+        },
+        async (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const updatedRecord = payload.new as any;
+            
+            // Check if this news is in our current list
+            if (newsIds.includes(updatedRecord.id)) {
+              if (updatedRecord.is_published) {
+                const { data } = await supabase
+                  .from('news')
+                  .select(`
+                    id, title, excerpt, image_url, published_at, slug,
+                    category:categories(name, slug)
+                  `)
+                  .eq('id', updatedRecord.id)
+                  .single();
+
+                if (data) {
+                  setNews((prev) =>
+                    prev.map((item) => (item.id === data.id ? data : item))
+                  );
+                }
+              } else {
+                // Unpublished - remove from list
+                setNews((prev) => prev.filter((item) => item.id !== updatedRecord.id));
+              }
+            }
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const deletedRecord = payload.old as any;
+            if (newsIds.includes(deletedRecord.id)) {
+              setNews((prev) => prev.filter((item) => item.id !== deletedRecord.id));
+              setTotalCount((c) => Math.max(0, c - 1));
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'news_tags',
+        },
+        async (payload) => {
+          const newRecord = payload.new as any;
+          
+          if (newRecord.tag_id === tag.id) {
+            // New news added to this tag
+            const { data } = await supabase
+              .from('news')
+              .select(`
+                id, title, excerpt, image_url, published_at, slug,
+                category:categories(name, slug)
+              `)
+              .eq('id', newRecord.news_id)
+              .eq('is_published', true)
+              .maybeSingle();
+
+            if (data) {
+              setNews((prev) => [data, ...prev.slice(0, ITEMS_PER_PAGE - 1)]);
+              setNewsIds((prev) => [data.id, ...prev]);
+              setTotalCount((c) => c + 1);
+              toast({
+                title: '📰 Nova notícia!',
+                description: data.title,
+              });
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'news_tags',
+        },
+        (payload) => {
+          const deletedRecord = payload.old as any;
+          
+          if (deletedRecord.tag_id === tag.id) {
+            setNews((prev) => prev.filter((item) => item.id !== deletedRecord.news_id));
+            setNewsIds((prev) => prev.filter((id) => id !== deletedRecord.news_id));
+            setTotalCount((c) => Math.max(0, c - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tag, newsIds, toast]);
 
   const handlePageChange = (page: number) => {
     fetchTagAndNews(page);
@@ -209,6 +323,7 @@ const TagPage = () => {
   if (!tag) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead title="Tag não encontrada" />
         <Header />
         <main className="flex-1 container mx-auto px-4 py-12">
           <div className="text-center">
@@ -226,6 +341,10 @@ const TagPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title={`${tag.name} - Portal de Notícias`}
+        description={`Notícias relacionadas à tag ${tag.name}`}
+      />
       <Header />
 
       <main className="flex-1">
