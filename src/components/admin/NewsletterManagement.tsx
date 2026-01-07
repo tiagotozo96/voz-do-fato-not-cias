@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Mail, Users, Send, Loader2, Trash2, History, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -415,41 +416,63 @@ export const NewsletterManagement = () => {
                             {format(new Date(subscriber.subscribed_at), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              {!subscriber.is_confirmed && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleResendConfirmation(subscriber)}
-                                  disabled={resendingId === subscriber.id}
-                                  title="Reenviar e-mail de confirmação"
-                                >
-                                  {resendingId === subscriber.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4 text-blue-600" />
-                                  )}
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleToggleActive(subscriber.id, subscriber.is_active)}
-                              >
-                                {subscriber.is_active ? (
-                                  <XCircle className="h-4 w-4 text-yellow-600" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                            <TooltipProvider>
+                              <div className="flex justify-end gap-2">
+                                {!subscriber.is_confirmed && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleResendConfirmation(subscriber)}
+                                        disabled={resendingId === subscriber.id}
+                                      >
+                                        {resendingId === subscriber.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                        ) : (
+                                          <RefreshCw className="h-4 w-4 text-blue-600" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Reenviar e-mail de confirmação</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteSubscriber(subscriber.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleToggleActive(subscriber.id, subscriber.is_active)}
+                                    >
+                                      {subscriber.is_active ? (
+                                        <XCircle className="h-4 w-4 text-yellow-600" />
+                                      ) : (
+                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{subscriber.is_active ? 'Desativar assinante' : 'Reativar assinante'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteSubscriber(subscriber.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Remover assinante</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
                           </TableCell>
                         </TableRow>
                       ))}
