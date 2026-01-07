@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
@@ -25,33 +26,35 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/categoria/:slug" element={<Category />} />
-            <Route path="/noticia/:slug" element={<NoticiaDetalhe />} />
-            <Route path="/editorias" element={<Editorias />} />
-            <Route path="/noticias" element={<Noticias />} />
-            <Route path="/web-stories" element={<WebStories />} />
-            <Route path="/videos" element={<Videos />} />
-            <Route path="/multimidia" element={<Multimidia />} />
-            <Route path="/contato" element={<Contato />} />
-            <Route path="/busca" element={<Busca />} />
-            <Route path="/tag/:slug" element={<Tag />} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
-            <Route path="/confirm-newsletter" element={<ConfirmNewsletter />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/categoria/:slug" element={<Category />} />
+              <Route path="/noticia/:slug" element={<NoticiaDetalhe />} />
+              <Route path="/editorias" element={<Editorias />} />
+              <Route path="/noticias" element={<Noticias />} />
+              <Route path="/web-stories" element={<WebStories />} />
+              <Route path="/videos" element={<Videos />} />
+              <Route path="/multimidia" element={<Multimidia />} />
+              <Route path="/contato" element={<Contato />} />
+              <Route path="/busca" element={<Busca />} />
+              <Route path="/tag/:slug" element={<Tag />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/confirm-newsletter" element={<ConfirmNewsletter />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

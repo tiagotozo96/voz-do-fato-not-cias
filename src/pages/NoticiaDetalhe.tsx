@@ -3,9 +3,11 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdBanner } from "@/components/AdBanner";
-import { Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, Link as LinkIcon, ChevronRight, Loader2, Eye, Tag } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
+import { ShareButtons } from "@/components/ShareButtons";
+import { LazyImage } from "@/components/LazyImage";
+import { Calendar, Clock, User, ChevronRight, Loader2, Eye, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsDetail {
@@ -15,6 +17,7 @@ interface NewsDetail {
   content: string | null;
   image_url: string | null;
   published_at: string | null;
+  updated_at: string;
   views: number | null;
   slug: string;
   category_id: string | null;
@@ -65,6 +68,7 @@ const NoticiaDetalhe = () => {
           content,
           image_url,
           published_at,
+          updated_at,
           views,
           slug,
           category_id,
@@ -152,35 +156,6 @@ const NoticiaDetalhe = () => {
     fetchNews();
   }, [slug]);
 
-  const handleShare = (platform: string) => {
-    const url = window.location.href;
-    const title = news?.title || "";
-    
-    let shareUrl = "";
-    switch (platform) {
-      case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-        break;
-      case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`;
-        break;
-      case "linkedin":
-        shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
-        break;
-      case "copy":
-        navigator.clipboard.writeText(url);
-        toast({
-          title: "Link copiado!",
-          description: "O link da notícia foi copiado para a área de transferência.",
-        });
-        return;
-    }
-    
-    if (shareUrl) {
-      window.open(shareUrl, "_blank", "width=600,height=400");
-    }
-  };
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -215,6 +190,7 @@ const NoticiaDetalhe = () => {
   if (!news) {
     return (
       <div className="min-h-screen bg-background">
+        <SEOHead title="Notícia não encontrada" />
         <Header />
         <main className="container mx-auto px-4 py-12">
           <div className="text-center">
@@ -232,19 +208,30 @@ const NoticiaDetalhe = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={news.title}
+        description={news.excerpt || undefined}
+        image={news.image_url || undefined}
+        type="article"
+        publishedTime={news.published_at || undefined}
+        modifiedTime={news.updated_at}
+        author={news.author?.full_name || "Voz do Fato"}
+        section={news.category?.name}
+        tags={tags.map((t) => t.name)}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
           {news.category && (
             <>
               <Link to={`/categoria/${news.category.slug}`} className="hover:text-primary transition-colors">
                 {news.category.name}
               </Link>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </>
           )}
           <span className="text-foreground line-clamp-1">{news.title}</span>
@@ -252,7 +239,7 @@ const NoticiaDetalhe = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <article className="lg:col-span-2">
+          <article className="lg:col-span-2" itemScope itemType="https://schema.org/NewsArticle">
             {/* Category Badge */}
             {news.category && (
               <Link 
@@ -264,7 +251,7 @@ const NoticiaDetalhe = () => {
             )}
 
             {/* Title */}
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight" itemProp="headline">
               {news.title}
             </h1>
 
@@ -272,21 +259,23 @@ const NoticiaDetalhe = () => {
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
               {news.author?.full_name && (
                 <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  <span>{news.author.full_name}</span>
+                  <User className="h-4 w-4" aria-hidden="true" />
+                  <span itemProp="author">{news.author.full_name}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>{formatDate(news.published_at)}</span>
+                <Calendar className="h-4 w-4" aria-hidden="true" />
+                <time itemProp="datePublished" dateTime={news.published_at || ""}>
+                  {formatDate(news.published_at)}
+                </time>
               </div>
               <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-4 w-4" aria-hidden="true" />
                 <span>{estimateReadTime(news.content)}</span>
               </div>
               {news.views && news.views > 0 && (
                 <div className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4" aria-hidden="true" />
                   <span>{news.views.toLocaleString("pt-BR")} visualizações</span>
                 </div>
               )}
@@ -294,60 +283,25 @@ const NoticiaDetalhe = () => {
 
             {/* Share Buttons */}
             <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Share2 className="h-4 w-4" />
-                Compartilhar:
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2]"
-                  onClick={() => handleShare("facebook")}
-                >
-                  <Facebook className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2]"
-                  onClick={() => handleShare("twitter")}
-                >
-                  <Twitter className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-[#0A66C2] hover:text-white hover:border-[#0A66C2]"
-                  onClick={() => handleShare("linkedin")}
-                >
-                  <Linkedin className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-muted"
-                  onClick={() => handleShare("copy")}
-                >
-                  <LinkIcon className="h-4 w-4" />
-                </Button>
-              </div>
+              <ShareButtons title={news.title} description={news.excerpt || ""} />
             </div>
 
             {/* Featured Image */}
             {news.image_url && (
-              <div className="relative aspect-video mb-8 rounded-lg overflow-hidden">
-                <img
+              <figure className="relative aspect-video mb-8 rounded-lg overflow-hidden">
+                <LazyImage
                   src={news.image_url}
                   alt={news.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full"
+                  itemProp="image"
                 />
-              </div>
+              </figure>
             )}
 
             {/* Content */}
             <div 
               className="prose prose-lg max-w-none [&>p]:text-foreground/90 [&>p]:leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-4 [&>blockquote]:border-l-4 [&>blockquote]:border-primary [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-muted-foreground [&>a]:text-primary [&>a]:underline [&>img]:max-w-full [&>img]:rounded-lg [&>img]:my-4"
+              itemProp="articleBody"
               dangerouslySetInnerHTML={{ 
                 __html: news.content || news.excerpt || '' 
               }}
@@ -357,7 +311,7 @@ const NoticiaDetalhe = () => {
             {tags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-border">
                 <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                  <Tag className="h-4 w-4" />
+                  <Tag className="h-4 w-4" aria-hidden="true" />
                   Tags:
                 </span>
                 {tags.map((tag) => (
@@ -373,31 +327,8 @@ const NoticiaDetalhe = () => {
             )}
 
             {/* Share Again at Bottom */}
-            <div className="flex items-center gap-3 mt-8 p-4 bg-muted/50 rounded-lg">
-              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Share2 className="h-4 w-4" />
-                Gostou? Compartilhe:
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2]"
-                  onClick={() => handleShare("facebook")}
-                >
-                  <Facebook className="h-4 w-4 mr-2" />
-                  Facebook
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2]"
-                  onClick={() => handleShare("twitter")}
-                >
-                  <Twitter className="h-4 w-4 mr-2" />
-                  Twitter
-                </Button>
-              </div>
+            <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+              <ShareButtons title={news.title} description={news.excerpt || ""} variant="full" />
             </div>
           </article>
 
@@ -418,10 +349,10 @@ const NoticiaDetalhe = () => {
                       to={`/noticia/${item.slug}`}
                       className="flex gap-3 group"
                     >
-                      <img
+                      <LazyImage
                         src={item.image_url || "/placeholder.svg"}
                         alt={item.title}
-                        className="w-20 h-16 object-cover rounded flex-shrink-0"
+                        className="w-20 h-16 rounded flex-shrink-0"
                       />
                       <div>
                         {item.category && (

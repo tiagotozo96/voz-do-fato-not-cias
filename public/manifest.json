@@ -1,0 +1,62 @@
+{
+  "name": "Voz do Fato - Portal de Notícias",
+  "short_name": "Voz do Fato",
+  "description": "Portal de notícias com informações atualizadas sobre Brasil, mundo, economia, esportes e entretenimento.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f8f8",
+  "theme_color": "#b91c1c",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["news", "entertainment", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Últimas Notícias",
+      "short_name": "Notícias",
+      "url": "/noticias",
+      "icons": [{ "src": "/favicon.ico", "sizes": "48x48" }]
+    },
+    {
+      "name": "Buscar",
+      "short_name": "Busca",
+      "url": "/busca",
+      "icons": [{ "src": "/favicon.ico", "sizes": "48x48" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
