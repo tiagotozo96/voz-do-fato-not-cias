@@ -4,17 +4,8 @@ import { CategoryCircle } from "@/components/CategoryCircle";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
 import { SEOHead } from "@/components/SEOHead";
-
-import brasilNews from "@/assets/brasil-news.jpg";
-import mundoNews from "@/assets/mundo-news.jpg";
-import tecnologiaNews from "@/assets/tecnologia-news.jpg";
-import economiaNews from "@/assets/economia-news.jpg";
-import esportesNews from "@/assets/esportes-news.jpg";
-import entretenimentoNews from "@/assets/entretenimento-news.jpg";
-import policiaNews1 from "@/assets/policia-news-1.jpg";
-import policiaNews2 from "@/assets/policia-news-2.jpg";
-import policiaNews3 from "@/assets/policia-news-3.jpg";
-import policiaNews4 from "@/assets/policia-news-4.jpg";
+import { useRealtimeNews } from "@/hooks/useRealtimeNews";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import catBrasil from "@/assets/cat-brasil.jpg";
 import catMundo from "@/assets/cat-mundo.jpg";
@@ -25,98 +16,62 @@ import catEntretenimento from "@/assets/cat-entretenimento.jpg";
 import catPolicia from "@/assets/cat-policia.jpg";
 
 const Index = () => {
+  const { news: allNews, isLoading } = useRealtimeNews({ limit: 20 });
+
   const categories = [
-    { name: "Brasil", icon: catBrasil },
-    { name: "Polícia", icon: catPolicia },
-    { name: "Tecnologia", icon: catTech },
-    { name: "Economia", icon: catEconomia },
-    { name: "Esportes", icon: catEsportes },
-    { name: "Entretenimento", icon: catEntretenimento },
+    { name: "Brasil", icon: catBrasil, slug: "brasil" },
+    { name: "Polícia", icon: catPolicia, slug: "policia" },
+    { name: "Tecnologia", icon: catTech, slug: "tecnologia" },
+    { name: "Economia", icon: catEconomia, slug: "economia" },
+    { name: "Esportes", icon: catEsportes, slug: "esportes" },
+    { name: "Entretenimento", icon: catEntretenimento, slug: "entretenimento" },
   ];
 
-  const featuredNews = {
-    title: "Tecnologia Transforma o Cenário Global de Comunicação",
-    description: "Novas plataformas digitais revolucionam a forma como consumimos informação e nos conectamos com o mundo.",
-    image: tecnologiaNews,
-    category: "TECNOLOGIA",
-    date: "23/11/2025 - Tecnologia",
+  // Get featured news (first featured or first news)
+  const featuredNews = allNews.find((n) => n.is_featured) || allNews[0];
+  
+  // Get police news
+  const policeNews = allNews
+    .filter((n) => n.category?.slug === 'policia' && n.id !== featuredNews?.id)
+    .slice(0, 4);
+  
+  // Get recent news (excluding featured and police)
+  const recentNews = allNews
+    .filter(
+      (n) =>
+        n.id !== featuredNews?.id &&
+        !policeNews.some((p) => p.id === n.id)
+    )
+    .slice(0, 6);
+
+  // Get highlights (last 2 from remaining)
+  const highlightNews = allNews
+    .filter(
+      (n) =>
+        n.id !== featuredNews?.id &&
+        !policeNews.some((p) => p.id === n.id) &&
+        !recentNews.some((r) => r.id === n.id)
+    )
+    .slice(0, 2);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   };
 
-  const policeNews = [
-    {
-      title: "Grande Operação Policial Desmantela Quadrilha na Capital",
-      description: "Ação coordenada resulta em prisões e apreensões importantes.",
-      image: policiaNews1,
-      category: "POLÍCIA",
-      date: "23/11/2025",
-    },
-    {
-      title: "Polícia Investiga Série de Crimes na Região Metropolitana",
-      description: "Autoridades trabalham para identificar suspeitos envolvidos.",
-      image: policiaNews2,
-      category: "POLÍCIA",
-      date: "23/11/2025",
-    },
-    {
-      title: "Coletiva de Imprensa Esclarece Detalhes de Operação",
-      description: "Comando da polícia apresenta resultados de investigação de meses.",
-      image: policiaNews3,
-      category: "POLÍCIA",
-      date: "23/11/2025",
-    },
-    {
-      title: "Perícia Criminal Trabalha em Caso de Grande Repercussão",
-      description: "Equipe forense coleta evidências em importante investigação.",
-      image: policiaNews4,
-      category: "POLÍCIA",
-      date: "22/11/2025",
-    },
-  ];
-
-  const recentNews = [
-    {
-      title: "Economia Brasileira Apresenta Sinais de Recuperação",
-      description: "Especialistas apontam crescimento em setores-chave da economia nacional.",
-      image: economiaNews,
-      category: "ECONOMIA",
-      date: "23/11/2025",
-    },
-    {
-      title: "Campeonato Nacional: Times se Preparam para Final",
-      description: "Grande decisão promete movimentar milhões de torcedores pelo país.",
-      image: esportesNews,
-      category: "ESPORTES",
-      date: "23/11/2025",
-    },
-    {
-      title: "Cinema Nacional Ganha Destaque em Festival Internacional",
-      description: "Produções brasileiras são aplaudidas em importante evento de cinema.",
-      image: entretenimentoNews,
-      category: "ENTRETENIMENTO",
-      date: "22/11/2025",
-    },
-    {
-      title: "Brasil Participa de Importante Reunião sobre Meio Ambiente",
-      description: "País apresenta novas políticas ambientais em conferência internacional.",
-      image: brasilNews,
-      category: "BRASIL",
-      date: "22/11/2025",
-    },
-    {
-      title: "Acontecimentos Globais Marcam Semana Internacional",
-      description: "Principais eventos ao redor do mundo impactam cenário geopolítico.",
-      image: mundoNews,
-      category: "MUNDO",
-      date: "22/11/2025",
-    },
-    {
-      title: "Inovação em Inteligência Artificial Chega ao Brasil",
-      description: "Empresas brasileiras adotam tecnologias de ponta para otimizar processos.",
-      image: tecnologiaNews,
-      category: "TECNOLOGIA",
-      date: "21/11/2025",
-    },
-  ];
+  const NewsCardSkeleton = () => (
+    <div className="space-y-3">
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <Skeleton className="h-4 w-20" />
+      <Skeleton className="h-6 w-full" />
+      <Skeleton className="h-4 w-3/4" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -146,7 +101,25 @@ const Index = () => {
 
         {/* Featured News */}
         <section className="container mx-auto px-4 py-12" aria-label="Notícia em destaque">
-          <NewsCard {...featuredNews} featured={true} />
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-96 w-full rounded-lg" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ) : featuredNews ? (
+            <NewsCard
+              title={featuredNews.title}
+              description={featuredNews.excerpt || ''}
+              image={featuredNews.image_url || ''}
+              category={featuredNews.category?.name?.toUpperCase() || ''}
+              date={`${formatDate(featuredNews.published_at)} - ${featuredNews.category?.name || ''}`}
+              slug={featuredNews.slug}
+              featured={true}
+            />
+          ) : (
+            <p className="text-center text-muted-foreground">Nenhuma notícia em destaque disponível.</p>
+          )}
         </section>
 
         {/* Police News Section - Highlighted */}
@@ -159,9 +132,30 @@ const Index = () => {
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {policeNews.map((news, index) => (
-                <NewsCard key={index} {...news} />
-              ))}
+              {isLoading ? (
+                <>
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                </>
+              ) : policeNews.length > 0 ? (
+                policeNews.map((news) => (
+                  <NewsCard
+                    key={news.id}
+                    title={news.title}
+                    description={news.excerpt || ''}
+                    image={news.image_url || ''}
+                    category={news.category?.name?.toUpperCase() || 'POLÍCIA'}
+                    date={formatDate(news.published_at)}
+                    slug={news.slug}
+                  />
+                ))
+              ) : (
+                <p className="col-span-4 text-center text-muted-foreground">
+                  Nenhuma notícia policial disponível.
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -179,9 +173,32 @@ const Index = () => {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentNews.map((news, index) => (
-              <NewsCard key={index} {...news} />
-            ))}
+            {isLoading ? (
+              <>
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+              </>
+            ) : recentNews.length > 0 ? (
+              recentNews.map((news) => (
+                <NewsCard
+                  key={news.id}
+                  title={news.title}
+                  description={news.excerpt || ''}
+                  image={news.image_url || ''}
+                  category={news.category?.name?.toUpperCase() || ''}
+                  date={formatDate(news.published_at)}
+                  slug={news.slug}
+                />
+              ))
+            ) : (
+              <p className="col-span-3 text-center text-muted-foreground">
+                Nenhuma notícia recente disponível.
+              </p>
+            )}
           </div>
         </section>
 
@@ -199,20 +216,28 @@ const Index = () => {
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <NewsCard
-                title="Análise: Mercado Financeiro em Transformação"
-                description="Experts analisam mudanças estruturais no cenário econômico brasileiro e internacional."
-                image={economiaNews}
-                category="ANÁLISE"
-                date="20/11/2025"
-              />
-              <NewsCard
-                title="Esporte e Sociedade: O Impacto Social do Futebol"
-                description="Como o esporte mais popular do país influencia questões sociais importantes."
-                image={esportesNews}
-                category="ESPECIAL"
-                date="20/11/2025"
-              />
+              {isLoading ? (
+                <>
+                  <NewsCardSkeleton />
+                  <NewsCardSkeleton />
+                </>
+              ) : highlightNews.length > 0 ? (
+                highlightNews.map((news) => (
+                  <NewsCard
+                    key={news.id}
+                    title={news.title}
+                    description={news.excerpt || ''}
+                    image={news.image_url || ''}
+                    category={news.category?.name?.toUpperCase() || ''}
+                    date={formatDate(news.published_at)}
+                    slug={news.slug}
+                  />
+                ))
+              ) : (
+                <p className="col-span-2 text-center text-muted-foreground">
+                  Nenhum destaque disponível.
+                </p>
+              )}
             </div>
           </div>
         </section>
